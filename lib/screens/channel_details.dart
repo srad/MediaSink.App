@@ -62,9 +62,9 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
               color: Colors.grey.shade200,
               child: Row(
                 children: [
-                  Text('Videos: ${channel.recordingsCount}',  style: TextStyle(fontSize: 16, color: Colors.black87)),
+                  Text('Videos: ${channel.recordingsCount}', style: TextStyle(fontSize: 16, color: Colors.black87)),
                   Spacer(),
-                  Text('Total size: ${channel.recordingsSize!.toGB()}',  style: TextStyle(fontSize: 16, color: Colors.black87),), //
+                  Text('Total size: ${channel.recordingsSize!.toGB()}', style: TextStyle(fontSize: 16, color: Colors.black87)), //
                 ],
               ),
             );
@@ -85,80 +85,80 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
             final channel = data;
             final recordings = data.recordings;
 
-            return ListView(
-              children: [
-                if (channel.recordingsCount == 0) Center(child: Text("No videos")),
+            return (channel.recordingsCount == 0)
+                ? Center(child: Text("No Videos", style: TextStyle(fontSize: 24)))
+                : ListView(
+                  children: [
+                    // Display recordings with play buttons
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: NeverScrollableScrollPhysics(),
+                      itemCount: recordings?.length,
+                      itemBuilder: (context, index) {
+                        final recording = recordings![index];
 
-                // Display recordings with play buttons
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: NeverScrollableScrollPhysics(),
-                  itemCount: recordings?.length,
-                  itemBuilder: (context, index) {
-                    final recording = recordings![index];
-
-                    return Card(
-                      margin: const EdgeInsets.all(6.0),
-                      shape: RoundedRectangleBorder(
-                        side: BorderSide(color: Colors.grey.shade500, width: 1),
-                        borderRadius: BorderRadius.circular(6), // Optional
-                      ),
-                      elevation: 4,
-                      child: Column(
-                        children: [
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.push(context, MaterialPageRoute(builder: (context) => VideoPlayerScreen(title: channel.channelName!, videoUrl: '$_serverUrl/recordings/${recording.pathRelative}')));
-                            },
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
-                                  child: CachedNetworkImage(
-                                    imageUrl: '$_serverUrl/recordings/${recording.previewCover ?? channel.preview}',
-                                    fit: BoxFit.cover,
-                                    height: 180,
-                                    width: double.infinity,
-                                    placeholder:
-                                        (context, url) => const SizedBox(
-                                          height: 180,
-                                          child: Center(child: CircularProgressIndicator()), //
-                                        ),
-                                    errorWidget:
-                                        (context, url, error) => Container(
-                                          height: 180,
-                                          color: Colors.grey[300],
-                                          child: const Center(child: Icon(Icons.broken_image, size: 40)), //
-                                        ),
-                                  ),
-                                ),
-                                const Icon(Icons.play_circle_fill, size: 64, color: Colors.white70),
-                              ],
-                            ),
+                        return Card(
+                          margin: const EdgeInsets.all(6.0),
+                          shape: RoundedRectangleBorder(
+                            side: BorderSide(color: Colors.grey.shade500, width: 1),
+                            borderRadius: BorderRadius.circular(6), // Optional
                           ),
-                          // Play button
-                          Padding(
-                            padding: EdgeInsets.fromLTRB(15, 0, 10, 0),
-                            child: Row(
-                              children: [
-                                Text(recording.duration!.toHHMMSS()),
-                                SizedBox(width: 10),
-                                Text(recording.size!.toGB()),
-                                Spacer(), //
-                                IconButton(onPressed: () => {}, icon: Icon(Icons.download)),
-                                IconButton(onPressed: () => {}, icon: Icon(Icons.favorite, color: Colors.pink)),
-                                IconButton(onPressed: () => {}, icon: Icon(Icons.delete, color: Colors.red.shade700)),
-                              ], //
-                            ),
-                          ), //
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ],
-            );
+                          elevation: 4,
+                          child: Column(
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(context, MaterialPageRoute(builder: (context) => VideoPlayerScreen(title: channel.channelName!, videoUrl: '$_serverUrl/recordings/${recording.pathRelative}')));
+                                },
+                                child: Stack(
+                                  alignment: Alignment.center,
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                                      child: CachedNetworkImage(
+                                        imageUrl: '$_serverUrl/recordings/${recording.previewCover ?? channel.preview}',
+                                        fit: BoxFit.cover,
+                                        height: 180,
+                                        width: double.infinity,
+                                        placeholder:
+                                            (context, url) => const SizedBox(
+                                              height: 180,
+                                              child: Center(child: CircularProgressIndicator()), //
+                                            ),
+                                        errorWidget:
+                                            (context, url, error) => Container(
+                                              height: 180,
+                                              color: Colors.grey[300],
+                                              child: const Center(child: Icon(Icons.broken_image, size: 40)), //
+                                            ),
+                                      ),
+                                    ),
+                                    const Icon(Icons.play_circle_fill, size: 64, color: Colors.white70),
+                                  ],
+                                ),
+                              ),
+                              // Play button
+                              Padding(
+                                padding: EdgeInsets.fromLTRB(15, 0, 10, 0),
+                                child: Row(
+                                  children: [
+                                    Text(recording.duration!.toHHMMSS()),
+                                    SizedBox(width: 10),
+                                    Text(recording.size!.toGB()),
+                                    Spacer(), //
+                                    IconButton(onPressed: () => {}, icon: Icon(Icons.download)),
+                                    IconButton(onPressed: () => {}, icon: Icon(Icons.favorite, color: Colors.pink)),
+                                    IconButton(onPressed: () => {}, icon: Icon(Icons.delete, color: Colors.red.shade700)),
+                                  ], //
+                                ),
+                              ), //
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                );
           } else {
             return const Center(child: Text('No data available.'));
           }

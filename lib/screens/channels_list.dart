@@ -6,6 +6,8 @@ import 'package:mediasink_app/api/export.dart';
 import 'package:mediasink_app/extensions/file.dart';
 import 'package:mediasink_app/screens/channel_details.dart';
 import 'package:mediasink_app/widgets/app_drawer.dart';
+import 'package:mediasink_app/widgets/channel_search_app_bar.dart';
+import 'package:mediasink_app/widgets/recording_indicator.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 extension ServicesChannelInfoCopyWith on ServicesChannelInfo {
@@ -73,7 +75,7 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
 
   List<ServicesChannelInfo> _channels = [];
 
-  Set<int> _loadingChannelIds = {};
+  final Set<int> _loadingChannelIds = {};
 
   @override
   void initState() {
@@ -102,22 +104,11 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            const Text('Channels'),
-            Spacer(),
-            IconButton(
-              onPressed: () {
-                setState(() {
-                  _showFavs = !_showFavs;
-                });
-              },
-              icon: Icon(Icons.favorite, color: _showFavs ? Colors.pink : Colors.grey),
-            ),
-          ],
-        ),
-      ),
+      appBar: AppBar(title: ChannelSearchAppBar(onSearchChanged: (p0) => {}, onFav: (fav) {
+        setState(() {
+          _showFavs = fav;
+        });
+      })),
       drawer: AppDrawer(),
       body: FutureBuilder<List<ServicesChannelInfo>>(
         future: _futureChannels,
@@ -188,52 +179,65 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
 
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 300),
-      child: ListView.builder(
-        key: ValueKey(_showFavs ? 'favs' : _selectedIndex),
-        itemCount: channels.length,
-        itemBuilder: (context, index) {
-          final channel = channels[index];
-          return KeyedSubtree(
-            key: ValueKey('${channel.channelId}_${channel.isPaused}_${channel.fav}'),
-            child: Card(
+      child: RefreshIndicator(
+        onRefresh: () async {
+          setState(() {
+            _futureChannels = fetchChannels();
+          });
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Reloaded')));
+        },
+        child: ListView.builder(
+          itemCount: channels.length,
+          itemBuilder: (context, index) {
+            final channel = channels[index];
+            return Card(
               margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
               elevation: 4,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (channel.preview != null)
-                    ClipRRect(
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
-                      child: GestureDetector(
-                        child: CachedNetworkImage(
-                          height: 180,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          imageUrl: 'http://192.168.0.219:4000/${channel.preview!}',
-                          placeholder: (context, url) => const CircularProgressIndicator(),
-                          errorWidget: (context, url, error) => Container(height: 180, color: Colors.grey[300], child: const Center(child: Icon(Icons.broken_image, size: 40))), //
-                        ),
-                        onTap: () {
-                          // Navigate to the Channel Details screen
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ChannelDetailsScreen(channelId: channel.channelId!, title: channel.channelName!), //
-                            ),
-                          );
-                        },
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                    child: GestureDetector(
+                      child: Stack(
+                        children: [
+                          CachedNetworkImage(
+                            height: 180,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            imageUrl: 'http://192.168.0.219:4000/${channel.preview!}',
+                            placeholder: (context, url) => const CircularProgressIndicator(),
+                            errorWidget: (context, url, error) => Container(height: 180, color: Colors.grey[300], child: const Center(child: Icon(Icons.broken_image, size: 40))), //
+                          ),
+                          // The blinking red dot in the top-right corner
+                          if (channel.isRecording == true)
+                            Positioned(top: 15, right: 15, child: RecordingIndicator()),
+                        ],
                       ),
+                      onTap: () {
+                        // Navigate to the Channel Details screen
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ChannelDetailsScreen(channelId: channel.channelId!, title: channel.channelName!), //
+                          ),
+                        );
+                      },
                     ),
+                  ),
                   Padding(
                     padding: const EdgeInsets.all(12.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(channel.displayName ?? "No display name", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 4),
                         GestureDetector(
-                          child: Text(channel.url!, style: const TextStyle(color: Colors.blue)),
+                          child: Row(
+                            children: [
+                              Text(channel.displayName ?? "No display name", style: TextStyle(fontSize: 20, color: Theme.of(context).colorScheme.primary)),
+                              Icon(Icons.link), //
+                            ],
+                          ),
                           onTap: () async {
                             final rawUrl = channel.url;
                             if (rawUrl == null || rawUrl.isEmpty) {
@@ -248,35 +252,45 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
                             await launchUrl(uri, mode: LaunchMode.externalApplication);
                           },
                         ),
-                        const SizedBox(height: 6),
-                        Row(children: [const Text('Tags', style: TextStyle(fontSize: 16)), Spacer(), Wrap(spacing: 8, children: channel.tags == null ? [] : channel.tags!.map((tag) => Chip(label: Text(tag))).toList())]),
-                        Divider(color: Colors.black12),
+                        Divider(color: Colors.transparent, height: 5),
                         Row(
                           children: [
-                            Text(channel.recordingsSize!.toGB(), style: TextStyle(fontSize: 14)),
-                            SizedBox(width: 5),
-                            Icon(Icons.storage),
-                            SizedBox(width: 10),
-                            Text(channel.recordingsCount.toString(), style: TextStyle(fontSize: 14)),
-                            SizedBox(width: 5),
-                            Icon(Icons.video_library_sharp),
+                            if (channel.tags == null) ElevatedButton(onPressed: () => {}, child: const Text('No tags')),
+                            Wrap(spacing: 8, children: channel.tags == null ? [] : channel.tags!.map((tag) => ElevatedButton(child: Text(tag), onPressed: () => {})).toList()),
                             Spacer(),
-                            IconButton(onPressed: () => favChannel(channel), icon: Icon(Icons.favorite, color: channel.fav == true ? Colors.pink : Colors.grey)),
-                            const Text('Pause'),
-                            Switch(value: channel.isPaused!, onChanged: _loadingChannelIds.contains(channel.channelId!) ? null : (value) => togglePause(channel)),
-                            if (_loadingChannelIds.contains(channel.channelId!)) const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                            SizedBox(width: 5),
-                            ElevatedButton(onPressed: () {}, child: Text('Edit')),
+                            ElevatedButton(onPressed: () => {}, child: Row(children: [Icon(Icons.add), const Text('Add')])), //
                           ],
+                        ),
+                        Divider(color: Colors.grey.shade300),
+                        Padding(
+                          padding: EdgeInsets.symmetric(vertical: 0, horizontal: 4),
+                          child: Row(
+                            children: [
+                              Text(channel.recordingsSize!.toGB(), style: TextStyle(fontSize: 14)),
+                              SizedBox(width: 5),
+                              Icon(Icons.storage),
+                              SizedBox(width: 15),
+                              Text(channel.recordingsCount.toString(), style: TextStyle(fontSize: 14)),
+                              SizedBox(width: 5),
+                              Icon(Icons.video_library_sharp),
+                              Spacer(),
+                              IconButton(onPressed: () => favChannel(channel), icon: Icon(Icons.favorite, color: channel.fav == true ? Colors.pink : Colors.grey)),
+                              const Text('Pause'),
+                              Switch(value: channel.isPaused!, onChanged: _loadingChannelIds.contains(channel.channelId!) ? null : (value) => togglePause(channel)),
+                              if (_loadingChannelIds.contains(channel.channelId!)) const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                              Spacer(),
+                              IconButton(onPressed: () {}, icon: Icon(Icons.edit)),
+                            ],
+                          ),
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
@@ -334,5 +348,19 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
     }
   }
 
-  Future<void> favChannel(ServicesChannelInfo channel) async {}
+  Future<void> favChannel(ServicesChannelInfo channel) async {
+    final apiClient = await ApiClientFactory().create();
+    if (channel.fav == true) {
+      await apiClient.unfavChannel(channel.channelId!);
+    } else {
+      await apiClient.favChannel(channel.channelId!);
+    }
+    setState(() {
+      final updated = channel.copyWith(fav: !channel.fav!);
+      final index = _channels.indexWhere((c) => c.channelId == channel.channelId);
+      if (index != -1) {
+        _channels[index] = updated;
+      }
+    });
+  }
 }
