@@ -109,7 +109,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   setState(() => _notificationsEnabled = value);
                 },
               ),
-              const Divider(),
+              const Divider(height: 30),
               const Text('Server Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               TextFormField(controller: _serverUrlController, decoration: const InputDecoration(labelText: 'Server URL'), validator: _validateUrl),
               TextFormField(controller: _usernameController, decoration: const InputDecoration(labelText: 'Username'), validator: (val) => val == null || val.trim().isEmpty ? 'Required' : null),

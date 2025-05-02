@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:mediasink_app/screens/channel_details.dart';
 import 'package:mediasink_app/screens/channels_list.dart';
 import 'package:mediasink_app/screens/startup.dart';
 import 'package:mediasink_app/screens/About.dart';
 import 'package:mediasink_app/screens/settings.dart';
 import 'package:mediasink_app/widgets/theme_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:fvp/fvp.dart' as fvp;
 
 void main() {
+  fvp.registerWith(
+    options: {
+      'platforms': ['android', 'ios'],
+    },
+  ); // only these platforms will use this plugin implementation
   runApp(ChangeNotifierProvider(create: (_) => ThemeProvider(), child: MediaSinkApp()));
 }
 
@@ -34,6 +41,7 @@ class _MediaSinkApp extends State<MediaSinkApp> {
       initialRoute: '/',
       routes: {
         '/channels': (context) => ChannelListScreen(),
+        '/channel': (context) => ChannelDetailsScreen(channelId: ModalRoute.of(context)!.settings.arguments as int, title: ModalRoute.of(context)!.settings.arguments as String),
         // '/channel': (context) {
         //   final videoId = ModalRoute.of(context)!.settings.arguments as int;
         //   return ChannelScreen(videoId: videoId);

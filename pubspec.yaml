@@ -28,6 +28,10 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  url_launcher: ^6.3.1
+  video_player: ^2.9.5
+  fvp: ^0.31.2
+  chewie: ^1.11.3
   cached_network_image: ^3.4.1
   flutter_secure_storage: 9.2.4
   dart_mappable: ^4.5.0

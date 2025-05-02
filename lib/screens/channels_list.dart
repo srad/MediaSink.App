@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:mediasink_app/api_factory.dart';
 import 'package:mediasink_app/api/export.dart';
+import 'package:mediasink_app/extensions/file.dart';
+import 'package:mediasink_app/screens/channel_details.dart';
+import 'package:mediasink_app/widgets/app_drawer.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 extension ServicesChannelInfoCopyWith on ServicesChannelInfo {
   ServicesChannelInfo copyWith({
@@ -20,6 +24,8 @@ extension ServicesChannelInfoCopyWith on ServicesChannelInfo {
     String? url,
     List<String>? tags,
     int? minRecording,
+    int? recordingsSize,
+    int? recordingsCount,
     String? preview, //
   }) {
     return ServicesChannelInfo(
@@ -37,6 +43,8 @@ extension ServicesChannelInfoCopyWith on ServicesChannelInfo {
       url: url ?? this.url,
       tags: tags ?? this.tags,
       minRecording: minRecording ?? this.minRecording,
+      recordingsCount: recordingsCount ?? this.recordingsCount,
+      recordingsSize: recordingsSize ?? this.recordingsSize,
       preview: preview ?? this.preview, //
     );
   }
@@ -53,14 +61,19 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
   late Future<List<ServicesChannelInfo>> _futureChannels;
   int _selectedIndex = 0;
 
-  List<ServicesChannelInfo> _recordingChannels = [];
-  List<ServicesChannelInfo> _offlineChannels = [];
-  List<ServicesChannelInfo> _disabledChannels = [];
-  List<ServicesChannelInfo> _favourites = [];
+  List<ServicesChannelInfo> get _recordingChannels => _channels.where((x) => x.isRecording == true).toList();
+
+  List<ServicesChannelInfo> get _offlineChannels => _channels.where((x) => x.isRecording == false && x.isPaused != true).toList();
+
+  List<ServicesChannelInfo> get _disabledChannels => _channels.where((x) => x.isPaused == true).toList();
+
+  List<ServicesChannelInfo> get _favourites => _channels.where((x) => x.fav == true).toList();
 
   bool _showFavs = false;
 
-  List<ServicesChannelInfo> channels = [];
+  List<ServicesChannelInfo> _channels = [];
+
+  Set<int> _loadingChannelIds = {};
 
   @override
   void initState() {
@@ -105,6 +118,7 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
           ],
         ),
       ),
+      drawer: AppDrawer(),
       body: FutureBuilder<List<ServicesChannelInfo>>(
         future: _futureChannels,
         builder: (context, snapshot) {
@@ -112,6 +126,11 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
             return const Center(child: CircularProgressIndicator());
           } else if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
+          } else if (snapshot.hasData) {
+            // ✅ Set the channels here once
+            if (_channels.isEmpty) {
+              _channels = snapshot.data!;
+            }
           }
 
           Widget listWidget;
@@ -126,18 +145,20 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
             listWidget = _buildChannelList(_disabledChannels, 'Disabled');
           }
 
-          return AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            transitionBuilder: (child, animation) {
-              final offsetAnimation = Tween<Offset>(begin: Offset(1, 0), end: Offset.zero).animate(animation);
-              return SlideTransition(position: offsetAnimation, child: child);
-            },
-            child: KeyedSubtree(
-              // Important: Give each list a unique key to trigger switch
-              key: ValueKey(_showFavs ? 'favs' : _selectedIndex),
-              child: listWidget,
-            ),
-          );
+          return AnimatedSwitcher(duration: const Duration(milliseconds: 300), child: listWidget);
+
+          // return AnimatedSwitcher(
+          //   duration: const Duration(milliseconds: 200),
+          //   transitionBuilder: (child, animation) {
+          //     final offsetAnimation = Tween<Offset>(begin: Offset(1, 0), end: Offset.zero).animate(animation);
+          //     return SlideTransition(position: offsetAnimation, child: child);
+          //   },
+          //   child: KeyedSubtree(
+          //     // Important: Give each list a unique key to trigger switch
+          //     key: ValueKey(_showFavs ? 'favs' : _selectedIndex),
+          //     child: listWidget,
+          //   ),
+          // );
         },
       ),
       bottomNavigationBar:
@@ -150,7 +171,7 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
                   });
                 },
                 items: [
-                  BottomNavigationBarItem(icon: Icon(Icons.fiber_manual_record), label: 'Recording'),
+                  BottomNavigationBarItem(icon: Icon(Icons.fiber_manual_record, color: Colors.red), label: 'Recording'),
                   BottomNavigationBarItem(icon: Icon(Icons.cloud_off), label: 'Offline'),
                   BottomNavigationBarItem(icon: Icon(Icons.pause_circle_filled), label: 'Disabled'),
                   //BottomNavigationBarItem(icon: Icon(Icons.favorite, color: Colors.pink), label: 'Favs'),
@@ -160,100 +181,158 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
     );
   }
 
-  Future<void> togglePause(ServicesChannelInfo channel) async {
-    final apiClient = await ApiClientFactory().create();
-
-    if (channel.isPaused!) {
-      await apiClient.resume(channel.channelId!);
-    } else {
-      await apiClient.pause(channel.channelId!);
-    }
-
-    setState(() {
-      final updated = channel.copyWith(isPaused: !channel.isPaused!);
-
-      // Update in all relevant lists
-      void replaceIn(List<ServicesChannelInfo> list) {
-        final index = list.indexWhere((c) => c.channelId == channel.channelId);
-        if (index != -1) {
-          list[index] = updated;
-        }
-      }
-
-      replaceIn(_recordingChannels);
-      replaceIn(_offlineChannels);
-      replaceIn(_disabledChannels);
-      replaceIn(_favourites);
-    });
-  }
-
   Widget _buildChannelList(List<ServicesChannelInfo> channels, String label) {
     if (channels.isEmpty) {
       return Center(child: Text('No $label channels available.'));
     }
 
-    return ListView.builder(
-      itemCount: channels.length,
-      itemBuilder: (context, index) {
-        final channel = channels[index];
-        return Card(
-          margin: const EdgeInsets.all(6.0),
-          elevation: 4,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (channel.preview != null)
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(6)), //
-                  child: CachedNetworkImage(
-                    height: 180,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    imageUrl: 'http://192.168.0.219:4000/${channel.preview!}',
-                    placeholder: (context, url) => const CircularProgressIndicator(),
-                    errorWidget: (context, url, error) => Container(height: 180, color: Colors.grey[300], child: const Center(child: Icon(Icons.broken_image, size: 40))), //
-                  ),
-                ),
-              Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(channel.displayName ?? "No display name", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 4),
-                    Text(channel.url!, style: const TextStyle(color: Colors.blueGrey)),
-                    const SizedBox(height: 6),
-                    Divider(color: Colors.grey.shade300),
-                    Row(children: [const Text('Tags', style: TextStyle(fontSize: 16)), Spacer(), Wrap(spacing: 8, children: channel.tags == null ? [] : channel.tags!.map((tag) => Chip(label: Text(tag))).toList())]),
-                    const SizedBox(height: 8),
-                    Row(
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      child: ListView.builder(
+        key: ValueKey(_showFavs ? 'favs' : _selectedIndex),
+        itemCount: channels.length,
+        itemBuilder: (context, index) {
+          final channel = channels[index];
+          return KeyedSubtree(
+            key: ValueKey('${channel.channelId}_${channel.isPaused}_${channel.fav}'),
+            child: Card(
+              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (channel.preview != null)
+                    ClipRRect(
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                      child: GestureDetector(
+                        child: CachedNetworkImage(
+                          height: 180,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          imageUrl: 'http://192.168.0.219:4000/${channel.preview!}',
+                          placeholder: (context, url) => const CircularProgressIndicator(),
+                          errorWidget: (context, url, error) => Container(height: 180, color: Colors.grey[300], child: const Center(child: Icon(Icons.broken_image, size: 40))), //
+                        ),
+                        onTap: () {
+                          // Navigate to the Channel Details screen
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ChannelDetailsScreen(channelId: channel.channelId!, title: channel.channelName!), //
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Fav'),
-                        IconButton(onPressed: () => favChannel(channel), icon: Icon(Icons.favorite, color: channel.fav == true ? Colors.pink : Colors.grey)), //
-                        const Text('Paused'), Switch(value: channel.isPaused!, onChanged: (value) => togglePause(channel)), Spacer(), ElevatedButton(onPressed: () {}, child: Text('Edit')),
+                        Text(channel.displayName ?? "No display name", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 4),
+                        GestureDetector(
+                          child: Text(channel.url!, style: const TextStyle(color: Colors.blue)),
+                          onTap: () async {
+                            final rawUrl = channel.url;
+                            if (rawUrl == null || rawUrl.isEmpty) {
+                              debugPrint('URL is null or empty');
+                              return;
+                            }
+                            final uri = Uri.tryParse(rawUrl);
+                            if (uri == null || !(await canLaunchUrl(uri))) {
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Invalid or unsupported URL: $rawUrl')));
+                              return;
+                            }
+                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          },
+                        ),
+                        const SizedBox(height: 6),
+                        Row(children: [const Text('Tags', style: TextStyle(fontSize: 16)), Spacer(), Wrap(spacing: 8, children: channel.tags == null ? [] : channel.tags!.map((tag) => Chip(label: Text(tag))).toList())]),
+                        Divider(color: Colors.black12),
+                        Row(
+                          children: [
+                            Text(channel.recordingsSize!.toGB(), style: TextStyle(fontSize: 14)),
+                            SizedBox(width: 5),
+                            Icon(Icons.storage),
+                            SizedBox(width: 10),
+                            Text(channel.recordingsCount.toString(), style: TextStyle(fontSize: 14)),
+                            SizedBox(width: 5),
+                            Icon(Icons.video_library_sharp),
+                            Spacer(),
+                            IconButton(onPressed: () => favChannel(channel), icon: Icon(Icons.favorite, color: channel.fav == true ? Colors.pink : Colors.grey)),
+                            const Text('Pause'),
+                            Switch(value: channel.isPaused!, onChanged: _loadingChannelIds.contains(channel.channelId!) ? null : (value) => togglePause(channel)),
+                            if (_loadingChannelIds.contains(channel.channelId!)) const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                            SizedBox(width: 5),
+                            ElevatedButton(onPressed: () {}, child: Text('Edit')),
+                          ],
+                        ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> togglePause(ServicesChannelInfo channel) async {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(channel.isPaused! ? 'Resume recording' : 'Pause recording'),
+          content: Text(channel.isPaused! ? 'Do you want to allow stream recording?' : 'Do you want to pause any stream recording for this channel?'),
+          actions: <Widget>[
+            TextButton(onPressed: () => Navigator.pop(context, 'Cancel'), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () async {
+                await togglePauseExecute(channel);
+                Navigator.pop(context, 'OK');
+              },
+              child: const Text('OK'),
+            ),
+          ],
         );
       },
     );
   }
 
-  Future<void> favChannel(ServicesChannelInfo channel) async {
+  Future<void> togglePauseExecute(ServicesChannelInfo channel) async {
     final apiClient = await ApiClientFactory().create();
-    if (channel.fav!) {
-      await apiClient.unfavChannel(channel.channelId!);
-    } else {
-      await apiClient.favChannel(channel.channelId!);
-    }
 
     setState(() {
-      final updated = channel.copyWith(fav: !channel.fav!);
+      _loadingChannelIds.add(channel.channelId!);
     });
+
+    try {
+      if (channel.isPaused!) {
+        await apiClient.resume(channel.channelId!);
+      } else {
+        await apiClient.pause(channel.channelId!);
+      }
+
+      setState(() {
+        final updated = channel.copyWith(isPaused: !channel.isPaused!);
+        final index = _channels.indexWhere((c) => c.channelId == channel.channelId);
+        if (index != -1) {
+          _channels[index] = updated;
+        }
+      });
+    } catch (e) {
+      // Optional: show error
+      print('Failed to toggle pause: $e');
+    } finally {
+      setState(() {
+        _loadingChannelIds.remove(channel.channelId!);
+      });
+    }
   }
+
+  Future<void> favChannel(ServicesChannelInfo channel) async {}
 }
