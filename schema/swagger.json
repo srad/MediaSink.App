@@ -1,0 +1,2315 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "contact": {}
+    },
+    "paths": {
+        "/admin/import": {
+            "get": {
+                "description": "version information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Returns server version information",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ImportInfoResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Return a list of channels",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Run once the import of mp4 files in the recordings folder, which are not yet in the system",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/version": {
+            "get": {
+                "description": "version information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Returns server version information",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/responses.ServerInfoResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "description": "User login",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "User login",
+                "parameters": [
+                    {
+                        "description": "Username and password",
+                        "name": "AuthenticationRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.AuthenticationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "JWT token for authentication",
+                        "schema": {
+                            "$ref": "#/definitions/responses.LoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "401": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/signup": {
+            "post": {
+                "description": "Create new user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Create new user",
+                "parameters": [
+                    {
+                        "description": "Username and password",
+                        "name": "AuthenticationRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.AuthenticationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "JWT token for authentication",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "400": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/channels": {
+            "get": {
+                "description": "Return a list of channels",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "channels"
+                ],
+                "summary": "Return a list of channels",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/services.ChannelInfo"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Add a new channel",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "channels"
+                ],
+                "summary": "Add a new channel",
+                "parameters": [
+                    {
+                        "description": "Channel data",
+                        "name": "ChannelRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.ChannelRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.ChannelInfo"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/channels/{id}": {
+            "get": {
+                "description": "Return the data of one channel",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "channels"
+                ],
+                "summary": "Return the data of one channel",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Channel id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/services.ChannelInfo"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete channel with all recordings",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "channels"
+                ],
+                "summary": "Delete channel",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "List of tags",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Update channel data",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "channels"
+                ],
+                "summary": "Update channel data",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Channel id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Channel data",
+                        "name": "ChannelRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.ChannelRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/database.Channel"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/channels/{id}/fav": {
+            "patch": {
+                "description": "Mark channel as one of favorites",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "channels"
+                ],
+                "summary": "Mark channel as one of favorites",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Channel id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/channels/{id}/pause": {
+            "post": {
+                "description": "Pause channel for recording",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "channels"
+                ],
+                "summary": "Pause channel for recording",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Channel id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/channels/{id}/resume": {
+            "post": {
+                "description": "Delete channel with all recordings",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "channels"
+                ],
+                "summary": "Tag a channel",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Channel id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/channels/{id}/tags": {
+            "patch": {
+                "description": "Tag a channel",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "channels"
+                ],
+                "summary": "Tag a channel",
+                "parameters": [
+                    {
+                        "description": "Channel data",
+                        "name": "ChannelTagsUpdateRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.ChannelTagsUpdateRequest"
+                        }
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Channel id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/channels/{id}/unfav": {
+            "patch": {
+                "description": "Remove channel as one of favorites",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "channels"
+                ],
+                "summary": "Remove channel as one of favorites",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Channel id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/channels/{id}/upload": {
+            "post": {
+                "description": "Add a new channel",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "channels"
+                ],
+                "summary": "Add a new channel",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Channel id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "Uploaded file chunk",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/database.Recording"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/info/disk": {
+            "get": {
+                "description": "Get disk information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "info"
+                ],
+                "summary": "Get disk information",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.DiskInfo"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/info/{seconds}": {
+            "get": {
+                "description": "Get system metrics",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "info"
+                ],
+                "summary": "Get system metrics",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Number of seconds to measure",
+                        "name": "seconds",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/helpers.SysInfo"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/jobs/list": {
+            "post": {
+                "description": "Allow paging through jobs by providing skip, take, statuses, and sort order.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "jobs"
+                ],
+                "summary": "Jobs pagination",
+                "parameters": [
+                    {
+                        "description": "Job pagination properties",
+                        "name": "JobsRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.JobsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/responses.JobsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "500": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/jobs/pause": {
+            "post": {
+                "description": "Stops the job processing",
+                "tags": [
+                    "jobs"
+                ],
+                "summary": "Stops the job processing",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/jobs/resume": {
+            "post": {
+                "description": "Start the job processing",
+                "tags": [
+                    "jobs"
+                ],
+                "summary": "Start the job processing",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/jobs/stop/{pid}": {
+            "post": {
+                "description": "Interrupt job gracefully",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "jobs"
+                ],
+                "summary": "Interrupt job gracefully",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Process ID",
+                        "name": "pid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "500": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/jobs/worker": {
+            "get": {
+                "description": "Job worker status",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "jobs"
+                ],
+                "summary": "Job worker status",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/responses.JobWorkerStatus"
+                        }
+                    }
+                }
+            }
+        },
+        "/jobs/{id}": {
+            "post": {
+                "description": "Enqueue a preview job for a video in a channel. For now only preview jobs allowed via REST",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "jobs"
+                ],
+                "summary": "Enqueue a preview job",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Recording item id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/database.Job"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "500": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Interrupt and delete job gracefully",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "jobs"
+                ],
+                "summary": "Interrupt and delete job gracefully",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Job id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "400": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "500": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/processes": {
+            "get": {
+                "description": "Return a list of streaming processes",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "processes"
+                ],
+                "summary": "Return a list of streaming processes",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/services.ProcessInfo"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/recorder": {
+            "get": {
+                "description": "Return if server is current recording.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recorder"
+                ],
+                "summary": "Return if server is current recording",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/responses.RecordingStatusResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error"
+                    }
+                }
+            }
+        },
+        "/recorder/pause": {
+            "post": {
+                "tags": [
+                    "recorder"
+                ],
+                "summary": "StopRecorder server recording",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/recorder/resume": {
+            "post": {
+                "tags": [
+                    "recorder"
+                ],
+                "summary": "StartRecorder server recording",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/recordings": {
+            "get": {
+                "description": "Return a list of recordings.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recordings"
+                ],
+                "summary": "Return a list of recordings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/database.Recording"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/recordings/bookmarks": {
+            "get": {
+                "description": "Returns all bookmarked recordings.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recordings"
+                ],
+                "summary": "Returns all bookmarked recordings",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/database.Recording"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/recordings/filter/{column}/{order}/{limit}": {
+            "get": {
+                "description": "Get the top N the latest recordings.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recordings"
+                ],
+                "summary": "Get the top N the latest recordings",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "How many recordings",
+                        "name": "limit",
+                        "in": "path"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/database.Recording"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "500": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/recordings/generate/posters": {
+            "post": {
+                "description": "Return a list of recordings.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recordings"
+                ],
+                "summary": "Return a list of recordings",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "500": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/recordings/isupdating": {
+            "get": {
+                "description": "Returns if current the videos are updated.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recordings"
+                ],
+                "summary": "Returns if current the videos are updated.",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "500": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/recordings/random/{limit}": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recordings"
+                ],
+                "summary": "Get random videos",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "How many recordings",
+                        "name": "limit",
+                        "in": "path"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/database.Recording"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "500": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/recordings/updateinfo": {
+            "post": {
+                "description": "Return a list of recordings.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recordings"
+                ],
+                "summary": "Return a list of recordings",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "500": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/recordings/{channelName}/{filename}/download": {
+            "get": {
+                "description": "Download a file from a channel.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recordings"
+                ],
+                "summary": "Download a file from a channel",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Channel name",
+                        "name": "channelName",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filename to generate the preview for",
+                        "name": "filename",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "500": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/recordings/{id}": {
+            "get": {
+                "description": "Return a list of recordings for a particular channel.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recordings"
+                ],
+                "summary": "Return a list of recordings for a particular channel",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Recording item id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/database.Recording"
+                        }
+                    },
+                    "400": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "500": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Delete recording",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recordings"
+                ],
+                "summary": "Delete recording",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Recording item id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "500": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/recordings/{id}/cut": {
+            "post": {
+                "description": "Cut a video and merge all defined segments",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recordings"
+                ],
+                "summary": "Cut a video and merge all defined segments",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Recording item id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Start and end timestamp of cutting sequences.",
+                        "name": "CutRequest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/requests.CutRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/database.Job"
+                        }
+                    },
+                    "400": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "500": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/recordings/{id}/fav": {
+            "patch": {
+                "description": "Bookmark a certain video in a channel.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recordings"
+                ],
+                "summary": "Bookmark a certain video in a channel",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Recording item id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "500": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/recordings/{id}/preview": {
+            "post": {
+                "description": "Generate preview for a certain video in a channel.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recordings"
+                ],
+                "summary": "Generate preview for a certain video in a channel",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Recording item id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/database.Job"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "500": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/recordings/{id}/unfav": {
+            "patch": {
+                "description": "Bookmark a certain video in a channel.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recordings"
+                ],
+                "summary": "Bookmark a certain video in a channel",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Recording item id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "500": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/recordings/{id}/{mediaType}/convert": {
+            "post": {
+                "description": "Cut a video and merge all defined segments",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "recordings"
+                ],
+                "summary": "Cut a video and merge all defined segments",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Recording item id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Media type to convert to: 720, 1080, mp3",
+                        "name": "mediaType",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/database.Job"
+                        }
+                    },
+                    "400": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    },
+                    "500": {
+                        "description": "Error message",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        },
+        "/user/profile": {
+            "post": {
+                "description": "Get user profile",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user"
+                ],
+                "summary": "Get user profile",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "any"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": ""
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "database.Channel": {
+            "type": "object",
+            "properties": {
+                "channelId": {
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "channelName": {
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "createdAt": {
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "deleted": {
+                    "type": "boolean",
+                    "x-nullable": false
+                },
+                "displayName": {
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "fav": {
+                    "type": "boolean",
+                    "x-nullable": false
+                },
+                "isPaused": {
+                    "type": "boolean",
+                    "x-nullable": false
+                },
+                "minDuration": {
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "recordings": {
+                    "description": "1:n",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/database.Recording"
+                    }
+                },
+                "recordingsCount": {
+                    "description": "Only for query result.",
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "recordingsSize": {
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "skipStart": {
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "url": {
+                    "type": "string",
+                    "x-nullable": false
+                }
+            }
+        },
+        "database.Job": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean",
+                    "x-nullable": false
+                },
+                "args": {
+                    "type": "string"
+                },
+                "channelId": {
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "channelName": {
+                    "description": "Unique entry, this is the actual primary key",
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "command": {
+                    "type": "string"
+                },
+                "completedAt": {
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "createdAt": {
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "filename": {
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "filepath": {
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "info": {
+                    "type": "string"
+                },
+                "jobId": {
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "pid": {
+                    "description": "Additional information",
+                    "type": "integer"
+                },
+                "progress": {
+                    "type": "string"
+                },
+                "recordingId": {
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "startedAt": {
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/database.JobStatus"
+                        }
+                    ],
+                    "x-nullable": false
+                },
+                "task": {
+                    "description": "Default values only not to break migrations.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/database.JobTask"
+                        }
+                    ],
+                    "x-nullable": false
+                }
+            }
+        },
+        "database.JobOrder": {
+            "type": "string",
+            "enum": [
+                "ASC",
+                "DESC"
+            ],
+            "x-enum-varnames": [
+                "JobOrderASC",
+                "JobOrderDESC"
+            ]
+        },
+        "database.JobStatus": {
+            "type": "string",
+            "enum": [
+                "completed",
+                "open",
+                "error",
+                "canceled"
+            ],
+            "x-enum-varnames": [
+                "StatusJobCompleted",
+                "StatusJobOpen",
+                "StatusJobError",
+                "StatusJobCanceled"
+            ]
+        },
+        "database.JobTask": {
+            "type": "string",
+            "enum": [
+                "convert",
+                "preview-cover",
+                "preview-stripe",
+                "preview-video",
+                "cut"
+            ],
+            "x-enum-varnames": [
+                "TaskConvert",
+                "TaskPreviewCover",
+                "TaskPreviewStrip",
+                "TaskPreviewVideo",
+                "TaskCut"
+            ]
+        },
+        "database.Recording": {
+            "type": "object",
+            "required": [
+                "channelName",
+                "filename",
+                "pathRelative",
+                "videoType"
+            ],
+            "properties": {
+                "bitRate": {
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "bookmark": {
+                    "type": "boolean",
+                    "x-nullable": false
+                },
+                "channelId": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "x-nullable": false
+                },
+                "channelName": {
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "createdAt": {
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "duration": {
+                    "type": "number",
+                    "x-nullable": false
+                },
+                "filename": {
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "height": {
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "packets": {
+                    "description": "Total number of video packets/frames.",
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "pathRelative": {
+                    "type": "string"
+                },
+                "previewCover": {
+                    "type": "string"
+                },
+                "previewStripe": {
+                    "type": "string"
+                },
+                "previewVideo": {
+                    "type": "string"
+                },
+                "recordingId": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "x-nullable": false
+                },
+                "size": {
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "videoType": {
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "width": {
+                    "type": "integer",
+                    "x-nullable": false
+                }
+            }
+        },
+        "helpers.CPUInfo": {
+            "type": "object",
+            "properties": {
+                "loadCpu": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/helpers.CPULoad"
+                    },
+                    "x-nullable": false
+                }
+            }
+        },
+        "helpers.CPULoad": {
+            "type": "object",
+            "properties": {
+                "cpu": {
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "createdAt": {
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "load": {
+                    "type": "number",
+                    "x-nullable": false
+                }
+            }
+        },
+        "helpers.DiskInfo": {
+            "type": "object",
+            "properties": {
+                "availFormattedGb": {
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "pcent": {
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "sizeFormattedGb": {
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "usedFormattedGb": {
+                    "type": "integer",
+                    "x-nullable": false
+                }
+            }
+        },
+        "helpers.NetInfo": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "dev": {
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "receiveBytes": {
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "transmitBytes": {
+                    "type": "integer",
+                    "x-nullable": false
+                }
+            }
+        },
+        "helpers.SysInfo": {
+            "type": "object",
+            "properties": {
+                "cpuInfo": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/helpers.CPUInfo"
+                        }
+                    ],
+                    "x-nullable": false
+                },
+                "diskInfo": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/helpers.DiskInfo"
+                        }
+                    ],
+                    "x-nullable": false
+                },
+                "netInfo": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/helpers.NetInfo"
+                        }
+                    ],
+                    "x-nullable": false
+                }
+            }
+        },
+        "requests.AuthenticationRequest": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "username": {
+                    "type": "string",
+                    "x-nullable": false
+                }
+            }
+        },
+        "requests.ChannelRequest": {
+            "type": "object",
+            "properties": {
+                "channelName": {
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "deleted": {
+                    "type": "boolean"
+                },
+                "displayName": {
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "fav": {
+                    "type": "boolean"
+                },
+                "isPaused": {
+                    "type": "boolean",
+                    "x-nullable": false
+                },
+                "minDuration": {
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "skipStart": {
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "url": {
+                    "type": "string",
+                    "x-nullable": false
+                }
+            }
+        },
+        "requests.ChannelTagsUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "x-nullable": false
+                }
+            }
+        },
+        "requests.CutRequest": {
+            "type": "object",
+            "properties": {
+                "deleteAfterCut": {
+                    "type": "boolean",
+                    "x-nullable": false
+                },
+                "ends": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "x-nullable": false
+                },
+                "starts": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "x-nullable": false
+                }
+            }
+        },
+        "requests.JobsRequest": {
+            "type": "object",
+            "properties": {
+                "skip": {
+                    "type": "integer"
+                },
+                "sortOrder": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/database.JobOrder"
+                        }
+                    ],
+                    "x-nullable": false
+                },
+                "states": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/database.JobStatus"
+                    },
+                    "x-nullable": false
+                },
+                "take": {
+                    "type": "integer"
+                }
+            }
+        },
+        "responses.ImportInfoResponse": {
+            "type": "object",
+            "properties": {
+                "isImporting": {
+                    "type": "boolean"
+                },
+                "progress": {
+                    "type": "integer"
+                },
+                "size": {
+                    "type": "integer"
+                }
+            }
+        },
+        "responses.JobWorkerStatus": {
+            "type": "object",
+            "properties": {
+                "isProcessing": {
+                    "type": "boolean",
+                    "x-nullable": false
+                }
+            }
+        },
+        "responses.JobsResponse": {
+            "type": "object",
+            "properties": {
+                "jobs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/database.Job"
+                    }
+                },
+                "skip": {
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "take": {
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "totalCount": {
+                    "type": "integer",
+                    "x-nullable": false
+                }
+            }
+        },
+        "responses.LoginResponse": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string",
+                    "x-nullable": false
+                }
+            }
+        },
+        "responses.RecordingStatusResponse": {
+            "type": "object",
+            "properties": {
+                "isRecording": {
+                    "type": "boolean",
+                    "x-nullable": false
+                }
+            }
+        },
+        "responses.ServerInfoResponse": {
+            "type": "object",
+            "properties": {
+                "commit": {
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "version": {
+                    "type": "string",
+                    "x-nullable": false
+                }
+            }
+        },
+        "services.ChannelInfo": {
+            "type": "object",
+            "properties": {
+                "channelId": {
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "channelName": {
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "createdAt": {
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "deleted": {
+                    "type": "boolean",
+                    "x-nullable": false
+                },
+                "displayName": {
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "fav": {
+                    "type": "boolean",
+                    "x-nullable": false
+                },
+                "isOnline": {
+                    "type": "boolean",
+                    "x-nullable": false
+                },
+                "isPaused": {
+                    "type": "boolean",
+                    "x-nullable": false
+                },
+                "isRecording": {
+                    "type": "boolean",
+                    "x-nullable": false
+                },
+                "isTerminating": {
+                    "type": "boolean",
+                    "x-nullable": false
+                },
+                "minDuration": {
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "minRecording": {
+                    "type": "number",
+                    "x-nullable": false
+                },
+                "preview": {
+                    "type": "string",
+                    "x-nullable": false
+                },
+                "recordings": {
+                    "description": "1:n",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/database.Recording"
+                    }
+                },
+                "recordingsCount": {
+                    "description": "Only for query result.",
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "recordingsSize": {
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "skipStart": {
+                    "type": "integer",
+                    "x-nullable": false
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "url": {
+                    "type": "string",
+                    "x-nullable": false
+                }
+            }
+        },
+        "services.ProcessInfo": {
+            "type": "object",
+            "properties": {
+                "args": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "output": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "pid": {
+                    "type": "integer"
+                }
+            }
+        }
+    }
+}
