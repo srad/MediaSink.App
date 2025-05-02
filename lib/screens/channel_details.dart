@@ -7,6 +7,7 @@ import 'package:mediasink_app/extensions/file.dart';
 import 'package:mediasink_app/extensions/time.dart';
 import 'package:mediasink_app/screens/video_player.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:timeago/timeago.dart' as timeago;
 
 class ChannelDetailsScreen extends StatefulWidget {
   final int channelId;
@@ -40,7 +41,9 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      return ServicesChannelInfo.fromJson(data);
+      final channel = ServicesChannelInfo.fromJson(data);
+      channel.recordings?.sort((a, b) => DateTime.parse(b.createdAt!).compareTo(DateTime.parse(a.createdAt!)));
+      return channel;
     } else {
       throw Exception('Failed to load channel details');
     }
@@ -99,10 +102,6 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
 
                         return Card(
                           margin: const EdgeInsets.all(6.0),
-                          shape: RoundedRectangleBorder(
-                            side: BorderSide(color: Colors.grey.shade500, width: 1),
-                            borderRadius: BorderRadius.circular(6), // Optional
-                          ),
                           elevation: 4,
                           child: Column(
                             children: [
@@ -114,7 +113,7 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
                                   alignment: Alignment.center,
                                   children: [
                                     ClipRRect(
-                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
                                       child: CachedNetworkImage(
                                         imageUrl: '$_serverUrl/recordings/${recording.previewCover ?? channel.preview}',
                                         fit: BoxFit.cover,
@@ -143,11 +142,17 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
                                 child: Row(
                                   children: [
                                     Text(recording.duration!.toHHMMSS()),
-                                    SizedBox(width: 10),
+                                    const SizedBox(width: 5),
+                                    const Text("|"),
+                                    const SizedBox(width: 5),
                                     Text(recording.size!.toGB()),
-                                    Spacer(), //
+                                    const SizedBox(width: 5),
+                                    const Text("|"),
+                                    const SizedBox(width: 5),
+                                    Text('${timeago.format(DateTime.parse(recording.createdAt!), locale: 'en_short')} ago'),
+                                    const Spacer(), //
                                     IconButton(onPressed: () => {}, icon: Icon(Icons.download)),
-                                    IconButton(onPressed: () => {}, icon: Icon(Icons.favorite, color: Colors.pink)),
+                                    IconButton(onPressed: () => {}, icon: Icon(Icons.favorite, color: recording.bookmark == true ? Colors.pink : null)),
                                     IconButton(onPressed: () => {}, icon: Icon(Icons.delete, color: Colors.red.shade700)),
                                   ], //
                                 ),

@@ -28,6 +28,8 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  timeago: ^3.7.0
+  flutter_native_splash: ^2.4.6
   url_launcher: ^6.3.1
   video_player: ^2.9.5
   fvp: ^0.31.2
@@ -50,6 +52,7 @@ dependencies:
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
+  flutter_launcher_icons: ^0.14.3
   build_runner: ^2.4.15
   json_serializable: ^6.9.5
   retrofit_generator: ^9.1.9
@@ -107,3 +110,46 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_native_splash:
+  color: "#322448" # Background color
+  image: assets/splash.png # App logo (should be square-ish)
+  #branding: assets/branding.png # Optional: small branding icon at bottom
+  android: true
+  ios: true
+  web: false
+
+  android_12:
+  # The image parameter sets the splash screen icon image.  If this parameter is not specified,
+  # the app's launcher icon will be used instead.
+  # Please note that the splash screen will be clipped to a circle on the center of the screen.
+  # App icon with an icon background: This should be 960×960 pixels, and fit within a circle
+  # 640 pixels in diameter.
+  # App icon without an icon background: This should be 1152×1152 pixels, and fit within a circle
+  # 768 pixels in diameter.  To fit a 1152x1152 image within a circle with a 768 diameter, simply
+  # ensure that the most important design elements of your image are placed within a circular area
+  # with a 768 diameter at the center of the 1152x1152 canvas.
+    image: assets/splash.png
+
+  # Splash screen background color.
+    color: "#322448"
+
+  # App icon background color.
+    icon_background_color: "#322448"
+
+  # The branding property allows you to specify an image used as branding in the splash screen.
+  #branding: assets/dart.png
+
+  # The image_dark, color_dark, icon_background_color_dark, and branding_dark set values that
+  # apply when the device is in dark mode. If they are not specified, the app will use the
+  # parameters from above.  If there is no parameter above, the app will use the light mode values.
+  #image_dark: assets/android12splash-invert.png
+  #color_dark: "#042a49"
+  #icon_background_color_dark: "#eeeeee"
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon.png"
+  min_sdk_android: 21 # android min sdk min:16, default 21
+  remove_alpha_ios: true

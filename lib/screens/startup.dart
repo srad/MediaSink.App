@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -15,6 +16,7 @@ class _StartupScreen extends State<StartupScreen> {
   @override
   void initState() {
     super.initState();
+    FlutterNativeSplash.remove();
     _checkCredentials();
   }
 

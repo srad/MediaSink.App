@@ -193,12 +193,11 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
             return Card(
               margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
               elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
                     child: GestureDetector(
                       child: Stack(
                         children: [

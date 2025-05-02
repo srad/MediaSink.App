@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:mediasink_app/screens/channel_details.dart';
 import 'package:mediasink_app/screens/channels_list.dart';
 import 'package:mediasink_app/screens/startup.dart';
@@ -9,12 +10,15 @@ import 'package:provider/provider.dart';
 import 'package:fvp/fvp.dart' as fvp;
 
 void main() {
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   fvp.registerWith(
     options: {
       'platforms': ['android', 'ios'],
     },
   ); // only these platforms will use this plugin implementation
   runApp(ChangeNotifierProvider(create: (_) => ThemeProvider(), child: MediaSinkApp()));
+  // FlutterNativeSplash.remove();
 }
 
 class MediaSinkApp extends StatefulWidget {
