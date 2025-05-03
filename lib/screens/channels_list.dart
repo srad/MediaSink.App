@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:http/http.dart';
 import 'package:mediasink_app/api_factory.dart';
 import 'package:mediasink_app/api/export.dart';
 import 'package:mediasink_app/extensions/file.dart';
 import 'package:mediasink_app/screens/channel_details.dart';
+import 'package:mediasink_app/screens/channel_form.dart';
 import 'package:mediasink_app/widgets/app_drawer.dart';
 import 'package:mediasink_app/widgets/channel_search_app_bar.dart';
 import 'package:mediasink_app/widgets/recording_indicator.dart';
@@ -104,11 +106,17 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: ChannelSearchAppBar(onSearchChanged: (p0) => {}, onFav: (fav) {
-        setState(() {
-          _showFavs = fav;
-        });
-      })),
+      appBar: AppBar(
+        title: ChannelSearchAppBar(
+          onSearchChanged: (p0) => {},
+          onAdd: () => Navigator.pushNamed(context, '/channelForm'),
+          onFav: (fav) {
+            setState(() {
+              _showFavs = fav;
+            });
+          },
+        ),
+      ),
       drawer: AppDrawer(),
       body: FutureBuilder<List<ServicesChannelInfo>>(
         future: _futureChannels,
@@ -210,8 +218,7 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
                             errorWidget: (context, url, error) => Container(height: 180, color: Colors.grey[300], child: const Center(child: Icon(Icons.broken_image, size: 40))), //
                           ),
                           // The blinking red dot in the top-right corner
-                          if (channel.isRecording == true)
-                            Positioned(top: 15, right: 15, child: RecordingIndicator()),
+                          if (channel.isRecording == true) Positioned(top: 15, right: 15, child: RecordingIndicator()),
                         ],
                       ),
                       onTap: () {
@@ -278,7 +285,7 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
                               Switch(value: channel.isPaused!, onChanged: _loadingChannelIds.contains(channel.channelId!) ? null : (value) => togglePause(channel)),
                               if (_loadingChannelIds.contains(channel.channelId!)) const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
                               Spacer(),
-                              IconButton(onPressed: () {}, icon: Icon(Icons.edit)),
+                              IconButton(onPressed: () => editChannel(channel), icon: Icon(Icons.edit)),
                             ],
                           ),
                         ),
@@ -349,11 +356,21 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
 
   Future<void> favChannel(ServicesChannelInfo channel) async {
     final apiClient = await ApiClientFactory().create();
+
+    Response? response;
     if (channel.fav == true) {
-      await apiClient.unfavChannel(channel.channelId!);
+      response = await apiClient.unfavChannel(channel.channelId!);
     } else {
-      await apiClient.favChannel(channel.channelId!);
+      response = await apiClient.favChannel(channel.channelId!);
     }
+
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved ✅'), backgroundColor: Colors.green.shade500));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${response.body} ❌'), backgroundColor: Colors.red.shade300));
+      return;
+    }
+
     setState(() {
       final updated = channel.copyWith(fav: !channel.fav!);
       final index = _channels.indexWhere((c) => c.channelId == channel.channelId);
@@ -361,5 +378,27 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
         _channels[index] = updated;
       }
     });
+  }
+
+  void editChannel(ServicesChannelInfo channel) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (context) => ChannelFormScreen(
+              channel: ChannelForm(
+                channelId: channel.channelId,
+                channelName: channel.channelName!,
+                displayName: channel.displayName!,
+                skipStart: channel.skipStart!,
+                minDuration: channel.minDuration!,
+                url: channel.url!,
+                tags: channel.tags,
+                fav: channel.fav!,
+                isPaused: channel.isPaused!,
+              ),
+            ),
+      ),
+    );
   }
 }

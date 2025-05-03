@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:mediasink_app/utils.dart';
 import 'package:mediasink_app/widgets/app_drawer.dart';
 import 'package:mediasink_app/widgets/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+enum ServerState { valid, invalid, unchecked }
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -18,8 +21,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  String? get serverUrl => _serverUrlController.text.trim();
+
   final _secureStorage = const FlutterSecureStorage();
 
+  ServerState _serverState = ServerState.unchecked;
   bool _isSaving = false;
   bool _formValid = false;
 
@@ -50,20 +56,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _saveSettings() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _isSaving = true);
+    try {
+      setState(() => _isSaving = true);
+      setState(() {
+        _serverState = ServerState.unchecked;
+      });
+      if (!_formKey.currentState!.validate()) return;
+      final exists = await checkServerAvailable(Uri.parse(serverUrl!));
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('serverUrl', _serverUrlController.text.trim());
-    await prefs.setBool('darkMode', _darkMode);
-    await prefs.setBool('notificationsEnabled', _notificationsEnabled);
+      setState(() {
+        _serverState = exists ? ServerState.valid : ServerState.invalid;
+      });
 
-    await _secureStorage.write(key: 'server_username', value: _usernameController.text.trim());
-    await _secureStorage.write(key: 'server_password', value: _passwordController.text);
+      final snackBar = SnackBar(content: Text(_serverState == ServerState.valid ? 'Server is reachable, saved ✅' : 'Server is unreachable, not saved ❌'));
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      if (_serverState != ServerState.valid) {
+        return;
+      }
 
-    setState(() => _isSaving = false);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings saved')));
-    _saved = true;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('serverUrl', _serverUrlController.text.trim());
+      await prefs.setBool('darkMode', _darkMode);
+      await prefs.setBool('notificationsEnabled', _notificationsEnabled);
+
+      await _secureStorage.write(key: 'server_username', value: _usernameController.text.trim());
+      await _secureStorage.write(key: 'server_password', value: _passwordController.text);
+
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings saved')));
+      _saved = true;
+    } catch(e) {
+      final snackBar = SnackBar(content: Text(e.toString()));
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+    } finally {
+      setState(() => _isSaving = false);
+    }
   }
 
   void _validateForm() {
@@ -94,6 +120,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const Text('Server Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              TextFormField(controller: _serverUrlController, decoration: const InputDecoration(labelText: 'Server URL'), validator: _validateUrl),
+              TextFormField(controller: _usernameController, decoration: const InputDecoration(labelText: 'Username'), validator: (val) => val == null || val.trim().isEmpty ? 'Required' : null),
+              TextFormField(controller: _passwordController, decoration: const InputDecoration(labelText: 'Password'), obscureText: true, validator: (val) => val == null || val.isEmpty ? 'Required' : null),
+              const SizedBox(height: 20),
+              ElevatedButton(onPressed: _formValid && !_isSaving ? _saveSettings : null, child: _isSaving ? Container(height: 10, width: 10, child: CircularProgressIndicator()) : const Text('Save Settings')),
+              const Divider(height: 30),
               SwitchListTile(
                 title: const Text('Dark Mode'),
                 value: themeProvider.themeMode == ThemeMode.dark,
@@ -108,14 +141,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: (value) {
                   setState(() => _notificationsEnabled = value);
                 },
-              ),
-              const Divider(height: 30),
-              const Text('Server Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              TextFormField(controller: _serverUrlController, decoration: const InputDecoration(labelText: 'Server URL'), validator: _validateUrl),
-              TextFormField(controller: _usernameController, decoration: const InputDecoration(labelText: 'Username'), validator: (val) => val == null || val.trim().isEmpty ? 'Required' : null),
-              TextFormField(controller: _passwordController, decoration: const InputDecoration(labelText: 'Password'), obscureText: true, validator: (val) => val == null || val.isEmpty ? 'Required' : null),
-              const SizedBox(height: 20),
-              ElevatedButton(onPressed: _formValid && !_isSaving ? _saveSettings : null, child: _isSaving ? const CircularProgressIndicator() : const Text('Save Settings')),
+              ), //
             ],
           ),
         ),

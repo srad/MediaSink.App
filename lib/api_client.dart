@@ -53,12 +53,12 @@ class ApiClient {
     await post('/channels/$id/resume', {});
   }
 
-  Future<void> unfavChannel(int id) async {
-    await post('/channels/$id/unfav', {});
+  Future<http.Response> unfavChannel(int id) async {
+    return await patch('/channels/$id/unfav', {});
   }
 
-  Future<void> favChannel(int id) async {
-    await post('/channels/$id/fav', {});
+  Future<http.Response> favChannel(int id) async {
+    return await patch('/channels/$id/fav', {});
   }
 
   Map<String, String> _authHeaders() {
@@ -87,6 +87,12 @@ class ApiClient {
     await _initialize();
     final url = Uri.parse('$_baseUrl$endpoint');
     return _sendWithRetry(() => _httpClient.post(url, headers: _authHeaders(), body: jsonEncode(body)));
+  }
+
+  Future<http.Response> patch(String endpoint, Map<String, dynamic> body) async {
+    await _initialize();
+    final url = Uri.parse('$_baseUrl$endpoint');
+    return _sendWithRetry(() => _httpClient.patch(url, headers: _authHeaders(), body: jsonEncode(body)));
   }
 
   Future<http.Response> put(String endpoint, Map<String, dynamic> body) async {

@@ -50,7 +50,7 @@ class _AboutScreen extends State<AboutScreen> {
           //   _packageInfo.updateTime?.toIso8601String() ??
           //       'Update time not available',
           // ),
-          Padding(padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5), child: ElevatedButton(style: ButtonStyle(padding: WidgetStateProperty.all(EdgeInsets.symmetric(vertical: 20, horizontal: 0)), backgroundColor: WidgetStateProperty.all(Colors.deepPurple), foregroundColor: WidgetStateProperty.all(Colors.white)), child: const Text("Check for update"), onPressed: () {})),
+          //Padding(padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5), child: ElevatedButton(style: ButtonStyle(padding: WidgetStateProperty.all(EdgeInsets.symmetric(vertical: 20, horizontal: 0)), backgroundColor: WidgetStateProperty.all(Colors.deepPurple), foregroundColor: WidgetStateProperty.all(Colors.white)), child: const Text("Check for update"), onPressed: () {})),
         ],
       ),
     );
