@@ -1,58 +1,16 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:http/http.dart';
-import 'package:mediasink_app/api_factory.dart';
 import 'package:mediasink_app/api/export.dart';
+import 'package:mediasink_app/extensions/channel.dart';
 import 'package:mediasink_app/extensions/file.dart';
+import 'package:mediasink_app/rest_client_factory.dart';
 import 'package:mediasink_app/screens/channel_details.dart';
 import 'package:mediasink_app/screens/channel_form.dart';
 import 'package:mediasink_app/widgets/app_drawer.dart';
 import 'package:mediasink_app/widgets/channel_search_app_bar.dart';
+import 'package:mediasink_app/widgets/messages.dart';
 import 'package:mediasink_app/widgets/recording_indicator.dart';
 import 'package:url_launcher/url_launcher.dart';
-
-extension ServicesChannelInfoCopyWith on ServicesChannelInfo {
-  ServicesChannelInfo copyWith({
-    int? channelId,
-    String? createdAt,
-    bool? deleted,
-    String? channelName,
-    String? displayName,
-    bool? isRecording,
-    bool? isOnline,
-    bool? isPaused,
-    bool? fav,
-    int? skipStart,
-    int? minDuration,
-    String? url,
-    List<String>? tags,
-    int? minRecording,
-    int? recordingsSize,
-    int? recordingsCount,
-    String? preview, //
-  }) {
-    return ServicesChannelInfo(
-      channelId: channelId ?? this.channelId,
-      createdAt: createdAt ?? this.createdAt,
-      deleted: deleted ?? this.deleted,
-      channelName: channelName ?? this.channelName,
-      displayName: displayName ?? this.displayName,
-      isRecording: isRecording ?? this.isRecording,
-      isOnline: isOnline ?? this.isOnline,
-      isPaused: isPaused ?? this.isPaused,
-      fav: fav ?? this.fav,
-      skipStart: skipStart ?? this.skipStart,
-      minDuration: minDuration ?? this.minDuration,
-      url: url ?? this.url,
-      tags: tags ?? this.tags,
-      minRecording: minRecording ?? this.minRecording,
-      recordingsCount: recordingsCount ?? this.recordingsCount,
-      recordingsSize: recordingsSize ?? this.recordingsSize,
-      preview: preview ?? this.preview, //
-    );
-  }
-}
 
 class ChannelListScreen extends StatefulWidget {
   const ChannelListScreen({super.key});
@@ -61,14 +19,10 @@ class ChannelListScreen extends StatefulWidget {
   State<ChannelListScreen> createState() => _ChannelListScreenState();
 }
 
-// Add TickerProviderStateMixin for TabController
 class _ChannelListScreenState extends State<ChannelListScreen> with TickerProviderStateMixin {
   late Future<List<ServicesChannelInfo>> _futureChannels;
   String _search = "";
 
-  // int _selectedIndex = 0; // Removed: No longer needed for TabBar
-
-  // Original Getters - Unchanged
   List<ServicesChannelInfo> get _recordingChannels => _channels.where((x) => x.isRecording == true).toList();
 
   List<ServicesChannelInfo> get _offlineChannels => _channels.where((x) => x.isRecording == false && x.isPaused != true).toList();
@@ -77,13 +31,12 @@ class _ChannelListScreenState extends State<ChannelListScreen> with TickerProvid
 
   List<ServicesChannelInfo> get _favourites => _channels.where((x) => x.fav == true).toList();
 
-  List<ServicesChannelInfo> get _searchResult => _channels.where((x) => (x.displayName??'').contains(_search)).toList();
+  List<ServicesChannelInfo> get _searchResult => _channels.where((x) => (x.displayName ?? '').contains(_search)).toList();
 
   bool _showFavs = false;
   List<ServicesChannelInfo> _channels = [];
   final Set<int> _loadingChannelIds = {};
 
-  // --- Add TabController ---
   late TabController _tabController;
   final int _numTabs = 3; // Recording, Offline, Disabled
 
@@ -97,28 +50,14 @@ class _ChannelListScreenState extends State<ChannelListScreen> with TickerProvid
 
   @override
   void dispose() {
-    _tabController.dispose(); // Dispose the controller
+    _tabController.dispose();
     super.dispose();
   }
 
-  // Original fetchChannels - Unchanged
   Future<List<ServicesChannelInfo>> fetchChannels() async {
-    final apiClient = await ApiClientFactory().create();
-    final response = await apiClient.get('/channels');
-
-    if (response.statusCode == 200) {
-      final List<dynamic> jsonList = json.decode(response.body);
-      // Original mapping and sorting
-      final channels = jsonList.map((json) => ServicesChannelInfo.fromJson(json)).toList();
-      if (channels != null && channels.isNotEmpty) {
-        channels.sort((a, b) => (a.displayName ?? "").compareTo(b.displayName ?? ""));
-        return channels;
-      } else {
-        return [];
-      }
-    } else {
-      throw Exception('Failed to load channels');
-    }
+    final client = await RestClientFactory.create();
+    final response = await client.channels.getChannels();
+    return response;
   }
 
   @override
@@ -145,18 +84,7 @@ class _ChannelListScreenState extends State<ChannelListScreen> with TickerProvid
           isFav: _showFavs,
         ),
         // --- Add TabBar ---
-        bottom:
-            !_showFavs || _search.isEmpty
-                ? TabBar(
-                  controller: _tabController,
-                  labelColor: Color.alphaBlend(Colors.white.withValues(alpha: 0.8), Theme.of(context).primaryColor),
-                  tabs: const [
-                    Tab(icon: Icon(Icons.fiber_manual_record, color: Colors.red), text: 'Recording'),
-                    Tab(icon: Icon(Icons.videocam_off), text: 'Offline'),
-                    Tab(icon: Icon(Icons.pause), text: 'Disabled'),
-                  ],
-                )
-                : null, // No TabBar when showing favourites
+        bottom: !_showFavs || _search.isEmpty ? TabBar(controller: _tabController, labelColor: Color.alphaBlend(Colors.white.withValues(alpha: 0.8), Theme.of(context).primaryColor), tabs: const [Tab(icon: Icon(Icons.fiber_manual_record, color: Colors.red), text: 'Recording'), Tab(icon: Icon(Icons.videocam_off), text: 'Offline'), Tab(icon: Icon(Icons.pause), text: 'Disabled')]) : null, // No TabBar when showing favourites
       ),
       drawer: AppDrawer(), // Original Drawer
       body: FutureBuilder<List<ServicesChannelInfo>>(
@@ -184,8 +112,7 @@ class _ChannelListScreenState extends State<ChannelListScreen> with TickerProvid
           Widget bodyContent;
           if (_search.isNotEmpty) {
             bodyContent = _buildChannelList(_searchResult, 'Search', key: const ValueKey('search_list'));
-          }
-          else if (_showFavs) {
+          } else if (_showFavs) {
             // Show favourites list directly
             // Add key for AnimatedSwitcher if you wrap this later
             bodyContent = _buildChannelList(_favourites, 'Favs', key: const ValueKey('favs_list'));
@@ -221,8 +148,7 @@ class _ChannelListScreenState extends State<ChannelListScreen> with TickerProvid
   Widget _buildChannelList(List<ServicesChannelInfo> channels, String label, {Key? key}) {
     if (_search.isNotEmpty && channels.isEmpty) {
       return Center(key: key, child: Text('No search results.'));
-    }
-    else if (channels.isEmpty) {
+    } else if (channels.isEmpty) {
       // Use key here if provided for AnimatedSwitcher
       return Center(key: key, child: Text('No $label channels available.'));
     }
@@ -343,11 +269,11 @@ class _ChannelListScreenState extends State<ChannelListScreen> with TickerProvid
                         child: Row(
                           // Original stats and actions layout
                           children: [
-                            Icon(Icons.sd_storage, color: Theme.of(context).primaryColor),
+                            Icon(Icons.sd_storage_rounded, color: Theme.of(context).primaryColor),
                             const SizedBox(width: 5),
                             Text(channel.recordingsSize?.toGB() ?? '0 GB', style: const TextStyle(fontSize: 14)),
                             const SizedBox(width: 15),
-                            Icon(Icons.videocam, color: Theme.of(context).primaryColor),
+                            Icon(Icons.videocam_rounded, color: Theme.of(context).primaryColor),
                             const SizedBox(width: 5),
                             Text(channel.recordingsCount?.toString() ?? '0', style: const TextStyle(fontSize: 14)),
                             const Spacer(),
@@ -366,13 +292,13 @@ class _ChannelListScreenState extends State<ChannelListScreen> with TickerProvid
                               visualDensity: VisualDensity.compact,
                               padding: EdgeInsets.zero,
                               onPressed: () => favChannel(channel), //
-                              icon: Icon(Icons.favorite, color: channel.fav == true ? Colors.pink : Colors.grey),
+                              icon: Icon(channel!.fav == true ? Icons.favorite_rounded : Icons.favorite_outline_rounded, color: channel.fav == true ? Colors.pink : Colors.grey),
                             ),
                             IconButton(
                               visualDensity: VisualDensity.compact,
                               padding: EdgeInsets.zero,
                               onPressed: () => editChannel(channel), //
-                              icon: const Icon(Icons.edit),
+                              icon: const Icon(Icons.edit_rounded),
                             ),
                           ],
                         ),
@@ -388,8 +314,6 @@ class _ChannelListScreenState extends State<ChannelListScreen> with TickerProvid
     );
   }
 
-  // --- Original Action Methods - Unchanged ---
-
   Future<void> togglePause(ServicesChannelInfo channel) async {
     // Add checks for required data
     if (channel.channelId == null || channel.isPaused == null) {
@@ -398,7 +322,6 @@ class _ChannelListScreenState extends State<ChannelListScreen> with TickerProvid
       return;
     }
 
-    // Original dialog logic
     showDialog(
       context: context,
       builder: (context) {
@@ -421,40 +344,32 @@ class _ChannelListScreenState extends State<ChannelListScreen> with TickerProvid
   }
 
   Future<void> togglePauseExecute(ServicesChannelInfo channel) async {
-    // Check again, though togglePause should have already.
-    if (channel.channelId == null || channel.isPaused == null) return;
-
-    final apiClient = await ApiClientFactory().create();
-    final int id = channel.channelId!; // Non-null due to check
-
-    setState(() {
-      _loadingChannelIds.add(id);
-    });
+    final int id = channel.channelId!;
 
     try {
-      // Original API calls
+      final api = await RestClientFactory.create();
+
+      setState(() {
+        _loadingChannelIds.add(id);
+      });
+
       if (channel.isPaused!) {
-        await apiClient.resume(id);
+        await api.channels.postChannelsIdResume(id: id);
       } else {
-        await apiClient.pause(id);
+        await api.channels.postChannelsIdPause(id: id);
       }
 
-      // Original state update
       setState(() {
         final index = _channels.indexWhere((c) => c.channelId == id);
         if (index != -1) {
-          // Use the original copyWith extension
           _channels[index] = _channels[index].copyWith(isPaused: !channel.isPaused!);
         }
       });
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Channel state updated'), duration: Duration(seconds: 1)));
+      if (mounted) snackOk(context, Text('Channel state updated'));
     } catch (e) {
-      print('Failed to toggle pause: $e');
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update channel: $e'), backgroundColor: Colors.red));
+      if (mounted) snackErr(context, Text('Failed to update channel: $e'));
     } finally {
-      // Original finally block
       if (mounted) {
-        // Check if widget is still mounted before calling setState
         setState(() {
           _loadingChannelIds.remove(id);
         });
@@ -463,44 +378,28 @@ class _ChannelListScreenState extends State<ChannelListScreen> with TickerProvid
   }
 
   Future<void> favChannel(ServicesChannelInfo channel) async {
-    // Add checks for required data
-    if (channel.channelId == null || channel.fav == null) {
-      debugPrint("Cannot toggle favourite: Missing channelId or fav state.");
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cannot update favourite status.'), duration: Duration(seconds: 2)));
-      return;
-    }
-
-    final apiClient = await ApiClientFactory().create();
-    final int id = channel.channelId!; // Non-null due to check
-    final bool currentFavStatus = channel.fav!; // Non-null due to check
-
-    Response? response;
     try {
-      // Original API calls
-      if (currentFavStatus == true) {
-        response = await apiClient.unfavChannel(id);
-      } else {
-        response = await apiClient.favChannel(id);
-      }
+      final int id = channel.channelId!;
+      final bool currentFavStatus = channel.fav!;
+      final client = await RestClientFactory.create();
 
-      // Original status check and feedback
-      if (response.statusCode == 200) {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Saved ✅'), backgroundColor: Colors.green.shade500, duration: const Duration(seconds: 1)));
-        // Original state update
-        setState(() {
-          final index = _channels.indexWhere((c) => c.channelId == id);
-          if (index != -1) {
-            // Use the original copyWith extension
-            _channels[index] = _channels[index].copyWith(fav: !currentFavStatus);
-          }
-        });
+      if (currentFavStatus == true) {
+        await client.channels.patchChannelsIdUnfav(id: id);
       } else {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${response.body} ❌'), backgroundColor: Colors.red.shade300));
-        return; // Original early return on failure
+        await client.channels.patchChannelsIdFav(id: id);
       }
+      if (mounted) snackOk(context, const Text('Saved'));
+      // Original state update
+      setState(() {
+        final index = _channels.indexWhere((c) => c.channelId == id);
+        if (index != -1) {
+          // Use the original copyWith extension
+          _channels[index] = _channels[index].copyWith(fav: !currentFavStatus);
+        }
+      });
+      snackOk(context, const Text('saved'));
     } catch (e) {
-      print('Failed to fav/unfav channel: $e');
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error updating favourite: $e'), backgroundColor: Colors.red.shade300));
+      if (mounted) snackErr(context, Text('Error updating favourite: $e'));
     }
   }
 
@@ -542,16 +441,5 @@ class _ChannelListScreenState extends State<ChannelListScreen> with TickerProvid
         });
       }
     });
-  }
-}
-
-// Ensure the original file extension exists and works as expected
-// e.g., in extensions/file.dart
-extension FileSizeExtension on int? {
-  String toGB() {
-    if (this == null || this! <= 0) return '0 GB';
-    // Original simplistic GB conversion - adjust if needed
-    double gb = this! / (1024 * 1024 * 1024);
-    return '${gb.toStringAsFixed(1)} GB';
   }
 }

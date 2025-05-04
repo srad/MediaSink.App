@@ -7,13 +7,7 @@ class ChannelSearchAppBar extends StatefulWidget implements PreferredSizeWidget 
   final Function()? onAdd;
   final bool isFav;
 
-  const ChannelSearchAppBar({
-    super.key,
-    this.onSearchChanged,
-    this.onFav,
-    this.onAdd,
-    required this.isFav,
-  });
+  const ChannelSearchAppBar({super.key, this.onSearchChanged, this.onFav, this.onAdd, required this.isFav});
 
   @override
   _ChannelSearchAppBarState createState() => _ChannelSearchAppBarState();
@@ -55,23 +49,15 @@ class _ChannelSearchAppBarState extends State<ChannelSearchAppBar> {
 
   @override
   Widget build(BuildContext context) {
+    final color = Color.alphaBlend(Colors.white.withValues(alpha: 0.9), Theme.of(context).primaryColor);
+
     return AppBar(
       automaticallyImplyLeading: false,
-      title: TextField(
-        autofocus: false,
-        controller: _searchController,
-        decoration: InputDecoration(
-          hintText: 'Search channels...',
-          border: InputBorder.none,
-          hintStyle: TextStyle(color: Colors.white70),
-        ),
-        style: TextStyle(color: Colors.white),
-        cursorColor: Colors.white,
-      ),
+      title: TextField(autofocus: false, controller: _searchController, decoration: InputDecoration(hintText: 'Search channels...', border: InputBorder.none, hintStyle: TextStyle(color: color)), style: TextStyle(color: color), cursorColor: color),
       actions: [
         if (_showClearIcon)
           IconButton(
-            icon: Icon(Icons.clear, color: Colors.white),
+            icon: Icon(Icons.clear, color: color),
             onPressed: () {
               _searchController.clear();
             },
@@ -82,7 +68,7 @@ class _ChannelSearchAppBarState extends State<ChannelSearchAppBar> {
               widget.onFav?.call(!widget.isFav);
             });
           },
-          icon: Icon(Icons.favorite, color: widget.isFav ? Colors.pink : null),
+          icon: Icon(widget.isFav ? Icons.favorite : Icons.favorite_outline, color: widget.isFav ? Colors.pink : color),
         ),
         IconButton(
           onPressed: () {
@@ -90,7 +76,7 @@ class _ChannelSearchAppBarState extends State<ChannelSearchAppBar> {
               widget.onAdd!();
             }
           },
-          icon: Icon(Icons.add),
+          icon: Icon(Icons.add_circle, color: color),
         ),
       ],
     );
