@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:mediasink_app/api/export.dart';
+import 'package:mediasink_app/rest_client_factory.dart';
+import 'package:mediasink_app/utils/utils.dart';
+import 'package:mediasink_app/utils/validators.dart';
+import 'package:mediasink_app/widgets/messages.dart';
 
 class ChannelForm {
   int? channelId;
@@ -11,17 +17,7 @@ class ChannelForm {
   bool fav;
   bool isPaused;
 
-  ChannelForm({
-    this.channelId,
-    required this.channelName,
-    required this.displayName,
-    required this.skipStart,
-    required this.minDuration,
-    required this.url,
-    required this.tags,
-    required this.fav,
-    required this.isPaused,
-  });
+  ChannelForm({this.channelId, required this.channelName, required this.displayName, required this.skipStart, required this.minDuration, required this.url, required this.tags, required this.fav, required this.isPaused});
 }
 
 class ChannelFormScreen extends StatefulWidget {
@@ -43,6 +39,7 @@ class _ChannelFormScreenState extends State<ChannelFormScreen> {
   late TextEditingController _tagsController;
   bool _fav = false;
   bool _isPaused = false;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -54,7 +51,7 @@ class _ChannelFormScreenState extends State<ChannelFormScreen> {
     _skipStartController = TextEditingController(text: (c?.skipStart ?? 0).toString());
     _minDurationController = TextEditingController(text: (c?.minDuration ?? 10).toString());
     _urlController = TextEditingController(text: c?.url ?? '');
-    _tagsController = TextEditingController(text: c?.tags?.join(', ') ?? '');
+    _tagsController = TextEditingController(text: c?.tags?.join(',') ?? '');
     _fav = c?.fav ?? false;
     _isPaused = c?.isPaused ?? false;
   }
@@ -70,21 +67,25 @@ class _ChannelFormScreenState extends State<ChannelFormScreen> {
     super.dispose();
   }
 
-  void _submit() {
-    if (_formKey.currentState!.validate()) {
-      final newChannel = ChannelForm(
-        channelId: widget.channel?.channelId,
-        channelName: _channelNameController.text.trim(),
-        displayName: _displayNameController.text.trim(),
-        skipStart: int.parse(_skipStartController.text),
-        minDuration: int.parse(_minDurationController.text),
-        url: _urlController.text.trim(),
-        tags: _tagsController.text.split(',').map((e) => e.trim()).toList(),
-        fav: _fav,
-        isPaused: _isPaused,
-      );
-
-      Navigator.pop(context, newChannel); // return channel to caller
+  void _submit() async {
+    try {
+      setState(() {
+        _saving = true;
+      });
+      if (_formKey.currentState!.validate()) {
+        final newChannel = RequestsChannelRequest(channelName: _channelNameController.text.trim(), displayName: _displayNameController.text.trim(), skipStart: int.parse(_skipStartController.text), minDuration: int.parse(_minDurationController.text), url: _urlController.text.trim(), tags: _tagsController.text.split(',').map((e) => e.trim()).toList(), fav: _fav, isPaused: _isPaused);
+        final client = await RestClientFactory.create();
+        final result = await client.channels.postChannels(channelRequest: newChannel);
+        if (mounted) snackOk(context, const Text('Saved'));
+        await Future.delayed(Duration(seconds: 3)); // Wait for a moment for the data propagate
+        if (mounted) Navigator.pop(context, result); // return channel to caller
+      }
+    } catch (e) {
+      if (mounted) snackErr(context, Text(e.toString()));
+    } finally {
+      setState(() {
+        _saving = false;
+      });
     }
   }
 
@@ -110,47 +111,44 @@ class _ChannelFormScreenState extends State<ChannelFormScreen> {
                   return null;
                 },
               ),
-              TextFormField(
-                controller: _displayNameController,
-                decoration: const InputDecoration(labelText: 'Display Name'),
-                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              ),
-              TextFormField(
-                controller: _skipStartController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Skip Start (seconds)'),
-                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              ),
-              TextFormField(
-                controller: _minDurationController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Minimum Duration (minutes)'),
-                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              ),
+              TextFormField(controller: _displayNameController, decoration: const InputDecoration(labelText: 'Display Name'), validator: (value) => value == null || value.isEmpty ? 'Required' : null),
+              TextFormField(controller: _skipStartController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Skip Start of recording for (seconds)'), validator: (value) => value == null || value.isEmpty ? 'Required' : null),
+              TextFormField(controller: _minDurationController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Minimum Duration (minutes)'), validator: (value) => value == null || value.isEmpty ? 'Required' : null),
+
               TextFormField(
                 controller: _urlController,
-                decoration: const InputDecoration(labelText: 'URL'),
-                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
+                decoration: InputDecoration(
+                  labelText: 'Stream URL',
+                  suffixIcon: IconButton(
+                    icon: Icon(Icons.paste_rounded),
+                    tooltip: 'Paste',
+                    onPressed: () async {
+                      final clipboardData = await Clipboard.getData('text/plain');
+                      if (clipboardData != null && clipboardData.text != null) {
+                        _urlController.text = clipboardData.text!;
+                        if (_channelNameController.text.isEmpty) {
+                          final extracted = extractLongestAlphanumUnderscore(clipboardData.text!);
+                          _channelNameController.text = extracted;
+                          if (_displayNameController.text.isEmpty) {
+                            _displayNameController.text = extracted;
+                          }
+                        }
+                      }
+                    },
+                  ),
+                ),
+                validator: (value) => validateUrl(value),
               ),
-              TextFormField(
-                controller: _tagsController,
-                decoration: const InputDecoration(labelText: 'Tags (comma-separated)'),
-                validator: (value) => value == null || value.isEmpty ? 'Required' : null,
-              ),
-              SwitchListTile(
-                title: const Text('Favorite'),
-                value: _fav,
-                onChanged: (v) => setState(() => _fav = v),
-              ),
-              SwitchListTile(
-                title: const Text('Paused'),
-                value: _isPaused,
-                onChanged: (v) => setState(() => _isPaused = v),
-              ),
+              TextFormField(controller: _tagsController, decoration: const InputDecoration(labelText: 'Tags (comma-separated)'), validator: (value) => tagValidator(value)),
+              SwitchListTile(title: const Text('Favorite'), value: _fav, onChanged: (v) => setState(() => _fav = v)),
+              SwitchListTile(title: const Text('Paused'), value: _isPaused, onChanged: (v) => setState(() => _isPaused = v)),
               const SizedBox(height: 20),
               ElevatedButton(
-                onPressed: _submit,
-                child: Text(isEdit ? 'Update Channel' : 'Create Channel'),
+                onPressed: _saving ? null : _submit, // Disable button if saving
+                child:
+                    _saving
+                        ? SizedBox(height: 10, width: 10, child: CircularProgressIndicator()) // Show progress indicator
+                        : Text(isEdit ? 'Update Channel' : 'Create Channel'), // Show text otherwise
               ),
             ],
           ),

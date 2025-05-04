@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:mediasink_app/api/export.dart';
@@ -44,8 +46,13 @@ class _ChannelListScreenState extends State<ChannelListScreen> with TickerProvid
   void initState() {
     super.initState();
     _futureChannels = fetchChannels();
-    // Initialize TabController
+
     _tabController = TabController(length: _numTabs, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) {
+        setState(() {}); // Trigger rebuild to update tab icon color
+      }
+    });
   }
 
   @override
@@ -62,6 +69,8 @@ class _ChannelListScreenState extends State<ChannelListScreen> with TickerProvid
 
   @override
   Widget build(BuildContext context) {
+    final labelColor = Color.alphaBlend(Colors.white.withValues(alpha: 0.8), Theme.of(context).primaryColor);
+
     return Scaffold(
       appBar: AppBar(
         title: ChannelSearchAppBar(
@@ -84,7 +93,18 @@ class _ChannelListScreenState extends State<ChannelListScreen> with TickerProvid
           isFav: _showFavs,
         ),
         // --- Add TabBar ---
-        bottom: !_showFavs || _search.isEmpty ? TabBar(controller: _tabController, labelColor: Color.alphaBlend(Colors.white.withValues(alpha: 0.8), Theme.of(context).primaryColor), tabs: const [Tab(icon: Icon(Icons.fiber_manual_record, color: Colors.red), text: 'Recording'), Tab(icon: Icon(Icons.videocam_off), text: 'Offline'), Tab(icon: Icon(Icons.pause), text: 'Paused')]) : null, // No TabBar when showing favourites
+        bottom:
+            !_showFavs || _search.isEmpty
+                ? TabBar(
+                  controller: _tabController,
+                  labelColor: labelColor,
+                  tabs: [
+                    Tab(icon: Icon(Icons.fiber_manual_record, color: _tabController.index == 0 ? Colors.red : null), text: 'Recording'),
+                    const Tab(icon: Icon(Icons.videocam_off), text: 'Offline'),
+                    const Tab(icon: Icon(Icons.pause), text: 'Paused'), //
+                  ],
+                )
+                : null, // No TabBar when showing favourites
       ),
       drawer: AppDrawer(), // Original Drawer
       body: FutureBuilder<List<ServicesChannelInfo>>(
@@ -139,12 +159,9 @@ class _ChannelListScreenState extends State<ChannelListScreen> with TickerProvid
           );
         },
       ),
-      // --- Remove BottomNavigationBar ---
-      // bottomNavigationBar: (...) // This whole section is removed
     );
   }
 
-  // Original _buildChannelList - Unchanged (added optional key)
   Widget _buildChannelList(List<ServicesChannelInfo> channels, String label, {Key? key}) {
     if (_search.isNotEmpty && channels.isEmpty) {
       return Center(key: key, child: Text('No search results.'));
@@ -162,7 +179,6 @@ class _ChannelListScreenState extends State<ChannelListScreen> with TickerProvid
         setState(() {
           _futureChannels = fetchChannels();
         });
-        // Await fetch to update _channels (can be done in FutureBuilder too)
         try {
           _channels = await _futureChannels;
           if (mounted) {
@@ -179,138 +195,157 @@ class _ChannelListScreenState extends State<ChannelListScreen> with TickerProvid
         itemCount: channels.length,
         itemBuilder: (context, index) {
           final channel = channels[index];
-          // Original Card structure and content - Unchanged
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-            elevation: 4,
+          return _video(channel, label);
+        },
+      ),
+    );
+  }
+
+  Widget _video(ServicesChannelInfo channel, String label) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      elevation: 4,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+            child: GestureDetector(
+              child: Stack(
+                children: [
+                  if (_tabController.index == 2)
+                    // Image with grayscale color filter
+                    ColorFiltered(
+                      colorFilter: const ColorFilter.mode(
+                        Colors.grey,
+                        BlendMode.saturation, //
+                      ),
+                      child: _image(channel.preview),
+                    )
+                  else
+                    _image(channel.preview),
+                  if (_tabController.index == 1)
+                    const SizedBox(height: 180, width: double.infinity, child: Icon(Icons.videocam_off_rounded, size: 64, color: Colors.white)),
+                  if (_tabController.index == 2)
+                    const SizedBox(height: 180, width: double.infinity, child: Icon(Icons.pause_rounded, size: 64, color: Colors.white)),
+                  if (channel.isRecording == true) //
+                    const Positioned(top: 15, right: 15, child: RecordingIndicator()), //
+                ],
+              ),
+              onTap: () {
+                if (channel.channelId != null && channel.channelName != null) {
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => ChannelDetailsScreen(channelId: channel.channelId!, title: channel.channelName!)));
+                }
+              },
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(12.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
-                  child: GestureDetector(
-                    child: Stack(
-                      children: [
-                        CachedNetworkImage(
-                          height: 180,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          // Original URL construction - Ensure preview is not null
-                          imageUrl: channel.preview != null && channel.preview!.isNotEmpty ? 'http://192.168.0.219:4000/${channel.preview!}' : '',
-                          // Fallback handled by errorWidget
-                          placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
-                          // Centered placeholder
-                          errorWidget: (context, url, error) => Container(height: 180, color: Colors.grey[300], child: const Center(child: Icon(Icons.broken_image, size: 40))),
-                        ),
-                        if (channel.isRecording == true) const Positioned(top: 15, right: 15, child: RecordingIndicator()),
-                      ],
-                    ),
-                    onTap: () {
-                      if (channel.channelId != null && channel.channelName != null) {
-                        Navigator.push(context, MaterialPageRoute(builder: (context) => ChannelDetailsScreen(channelId: channel.channelId!, title: channel.channelName!)));
-                      }
-                    },
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                GestureDetector(
+                  child: Row(
                     children: [
-                      GestureDetector(
-                        child: Row(
-                          children: [
-                            Text(channel.displayName ?? "No display name", style: TextStyle(fontSize: 20, color: Theme.of(context).colorScheme.primary), overflow: TextOverflow.ellipsis),
-                            const SizedBox(width: 4), // Small space before icon
-                            const Icon(Icons.link), //
-                          ],
-                        ),
-                        onTap: () async {
-                          // Original URL Launching logic
-                          final rawUrl = channel.url;
-                          if (rawUrl == null || rawUrl.isEmpty) {
-                            debugPrint('URL is null or empty');
-                            return;
-                          }
-                          final uri = Uri.tryParse(rawUrl);
-                          if (uri == null) {
-                            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Invalid URL: $rawUrl')));
-                            return;
-                          }
-                          if (!(await canLaunchUrl(uri))) {
-                            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Cannot launch URL: $rawUrl')));
-                            return;
-                          }
-                          await launchUrl(uri, mode: LaunchMode.externalApplication);
-                        },
+                      Text(channel.displayName ?? "No display name", style: TextStyle(fontSize: 20, color: Theme.of(context).colorScheme.primary), overflow: TextOverflow.ellipsis),
+                      const SizedBox(width: 4), // Small space before icon
+                      const Icon(Icons.link), //
+                    ],
+                  ),
+                  onTap: () async {
+                    // Original URL Launching logic
+                    final rawUrl = channel.url;
+                    if (rawUrl == null || rawUrl.isEmpty) {
+                      debugPrint('URL is null or empty');
+                      return;
+                    }
+                    final uri = Uri.tryParse(rawUrl);
+                    if (uri == null) {
+                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Invalid URL: $rawUrl')));
+                      return;
+                    }
+                    if (!(await canLaunchUrl(uri))) {
+                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Cannot launch URL: $rawUrl')));
+                      return;
+                    }
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  },
+                ),
+                const Divider(color: Colors.transparent, height: 5),
+                Row(
+                  children: [
+                    // Original Tags display
+                    if (channel.tags == null || channel.tags!.isEmpty) // Show placeholder if null or empty
+                      ElevatedButton(onPressed: null, style: ElevatedButton.styleFrom(visualDensity: VisualDensity.compact), child: const Text('No tags')),
+                    // Use Expanded + Wrap for tags if they might overflow
+                    Expanded(
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 4, // Spacing if tags wrap to next line
+                        children: channel.tags == null ? [] : channel.tags!.map((tag) => ElevatedButton(style: ElevatedButton.styleFrom(visualDensity: VisualDensity.compact), child: Text(tag), onPressed: () => {})).toList(),
                       ),
-                      const Divider(color: Colors.transparent, height: 5),
-                      Row(
-                        children: [
-                          // Original Tags display
-                          if (channel.tags == null || channel.tags!.isEmpty) // Show placeholder if null or empty
-                            ElevatedButton(onPressed: null, style: ElevatedButton.styleFrom(visualDensity: VisualDensity.compact), child: const Text('No tags')),
-                          // Use Expanded + Wrap for tags if they might overflow
-                          Expanded(
-                            child: Wrap(
-                              spacing: 8,
-                              runSpacing: 4, // Spacing if tags wrap to next line
-                              children: channel.tags == null ? [] : channel.tags!.map((tag) => ElevatedButton(style: ElevatedButton.styleFrom(visualDensity: VisualDensity.compact), child: Text(tag), onPressed: () => {})).toList(),
-                            ),
-                          ),
-                          // Keep Add button separate? Or integrate differently? Original had Spacer() then button.
-                          // Spacer(), // Original position
-                          ElevatedButton.icon(style: ElevatedButton.styleFrom(visualDensity: VisualDensity.compact), icon: const Icon(Icons.add, size: 16), label: const Text('Add'), onPressed: () => {}), // Original Add button
-                        ],
+                    ),
+                    // Keep Add button separate? Or integrate differently? Original had Spacer() then button.
+                    // Spacer(), // Original position
+                    ElevatedButton.icon(style: ElevatedButton.styleFrom(visualDensity: VisualDensity.compact), icon: const Icon(Icons.add, size: 16), label: const Text('Add'), onPressed: () => {}), // Original Add button
+                  ],
+                ),
+                Divider(color: Colors.grey.shade300),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 4),
+                  child: Row(
+                    // Original stats and actions layout
+                    children: [
+                      Icon(Icons.sd_storage_rounded, color: Theme.of(context).primaryColor),
+                      const SizedBox(width: 5),
+                      Text(channel.recordingsSize?.toGB() ?? '0 GB', style: const TextStyle(fontSize: 14)),
+                      const SizedBox(width: 15),
+                      Icon(Icons.videocam_rounded, color: Theme.of(context).primaryColor),
+                      const SizedBox(width: 5),
+                      Text(channel.recordingsCount?.toString() ?? '0', style: const TextStyle(fontSize: 14)),
+                      const Spacer(),
+                      if (_loadingChannelIds.contains(channel.channelId))
+                        const SizedBox(width: 24, height: 16, child: Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))))
+                      else // Maintain space when not loading
+                        const SizedBox(width: 24),
+                      // Spacer(), // Original second spacer removed to keep edit icon closer? Adjust as needed.
+                      const Text('Pause', style: TextStyle(fontSize: 12)), // Slightly smaller text
+                      Switch(
+                        value: channel.isPaused ?? false, // Handle null isPaused safely
+                        onChanged: _loadingChannelIds.contains(channel.channelId) ? null : (value) => togglePause(channel),
                       ),
-                      Divider(color: Colors.grey.shade300),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 4),
-                        child: Row(
-                          // Original stats and actions layout
-                          children: [
-                            Icon(Icons.sd_storage_rounded, color: Theme.of(context).primaryColor),
-                            const SizedBox(width: 5),
-                            Text(channel.recordingsSize?.toGB() ?? '0 GB', style: const TextStyle(fontSize: 14)),
-                            const SizedBox(width: 15),
-                            Icon(Icons.videocam_rounded, color: Theme.of(context).primaryColor),
-                            const SizedBox(width: 5),
-                            Text(channel.recordingsCount?.toString() ?? '0', style: const TextStyle(fontSize: 14)),
-                            const Spacer(),
-                            if (_loadingChannelIds.contains(channel.channelId))
-                              const SizedBox(width: 24, height: 16, child: Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))))
-                            else // Maintain space when not loading
-                              const SizedBox(width: 24),
-                            // Spacer(), // Original second spacer removed to keep edit icon closer? Adjust as needed.
-                            const Text('Pause', style: TextStyle(fontSize: 12)), // Slightly smaller text
-                            Switch(
-                              value: channel.isPaused ?? false, // Handle null isPaused safely
-                              onChanged: _loadingChannelIds.contains(channel.channelId) ? null : (value) => togglePause(channel),
-                            ),
-                            Spacer(),
-                            IconButton(
-                              visualDensity: VisualDensity.compact,
-                              padding: EdgeInsets.zero,
-                              onPressed: () => favChannel(channel), //
-                              icon: Icon(channel!.fav == true ? Icons.favorite_rounded : Icons.favorite_outline_rounded, color: channel.fav == true ? Colors.pink : Colors.grey),
-                            ),
-                            IconButton(
-                              visualDensity: VisualDensity.compact,
-                              padding: EdgeInsets.zero,
-                              onPressed: () => editChannel(channel), //
-                              icon: const Icon(Icons.edit_rounded),
-                            ),
-                          ],
-                        ),
+                      Spacer(),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        onPressed: () => favChannel(channel), //
+                        icon: Icon(channel!.fav == true ? Icons.favorite_rounded : Icons.favorite_outline_rounded, color: channel.fav == true ? Colors.pink : Colors.grey),
+                      ),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        onPressed: () => editChannel(channel), //
+                        icon: const Icon(Icons.edit_rounded),
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-          );
-        },
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _image(String? preview) {
+    return CachedNetworkImage(
+      height: 180,
+      width: double.infinity,
+      fit: BoxFit.cover,
+      imageUrl: preview != null && preview!.isNotEmpty ? 'http://192.168.0.219:4000/${preview!}' : '',
+      placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+      errorWidget: (context, url, error) => Container(height: 180, color: Colors.grey[300], child: const Center(child: Icon(Icons.broken_image, size: 40))), //
     );
   }
 
@@ -403,7 +438,7 @@ class _ChannelListScreenState extends State<ChannelListScreen> with TickerProvid
     }
   }
 
-  void editChannel(ServicesChannelInfo channel) {
+  void editChannel(ServicesChannelInfo channel) async {
     // Basic check - original code didn't have extensive checks here
     if (channel.channelId == null) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cannot edit channel: Missing ID.')));
@@ -411,7 +446,7 @@ class _ChannelListScreenState extends State<ChannelListScreen> with TickerProvid
     }
 
     // Original navigation logic
-    Navigator.push(
+    final result = await Navigator.push<ServicesChannelInfo>(
       context,
       MaterialPageRoute(
         builder:
@@ -433,13 +468,12 @@ class _ChannelListScreenState extends State<ChannelListScreen> with TickerProvid
             ),
       ),
       // Original code didn't handle the result, add if needed
-    ).then((result) {
-      // Example: Refresh list if ChannelFormScreen returns true on save
-      if (result == true && mounted) {
-        setState(() {
-          _futureChannels = fetchChannels(); // Re-fetch data
-        });
-      }
-    });
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _futureChannels = fetchChannels(); // Re-fetch data
+      });
+    }
   }
 }

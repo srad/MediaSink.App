@@ -90,8 +90,8 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('😩', style: TextStyle(fontSize: 100)),
-                      Text("Empty", style: TextStyle(fontSize: 24)), //
+                      SizedBox(height: 260, width: 260, child: Image.asset('assets/cat3.png', filterQuality: FilterQuality.high)),
+                      Text('Empty', style: TextStyle(fontSize: 24)), //
                     ],
                   ),
                 )

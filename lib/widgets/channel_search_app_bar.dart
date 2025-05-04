@@ -68,7 +68,7 @@ class _ChannelSearchAppBarState extends State<ChannelSearchAppBar> {
               widget.onFav?.call(!widget.isFav);
             });
           },
-          icon: Icon(widget.isFav ? Icons.favorite : Icons.favorite_outline, color: widget.isFav ? Colors.pink : color),
+          icon: Icon(widget.isFav ? Icons.favorite_rounded : Icons.favorite_outline_rounded, color: widget.isFav ? Colors.pink : color),
         ),
         IconButton(
           onPressed: () {
@@ -76,7 +76,7 @@ class _ChannelSearchAppBarState extends State<ChannelSearchAppBar> {
               widget.onAdd!();
             }
           },
-          icon: Icon(Icons.add_circle, color: color),
+          icon: Icon(Icons.add_rounded, color: color),
         ),
       ],
     );
