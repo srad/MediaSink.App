@@ -13,9 +13,7 @@ import 'package:fvp/fvp.dart' as fvp;
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-  ]);
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   fvp.registerWith(
     options: {
@@ -33,9 +31,24 @@ class MediaSinkApp extends StatefulWidget {
   State<StatefulWidget> createState() => _MediaSinkApp();
 }
 
+extension HexColor on String {
+  Color toColor() {
+    final hex = replaceAll('#', '');
+    return Color(int.parse('FF$hex', radix: 16));
+  }
+}
+
 class _MediaSinkApp extends State<MediaSinkApp> {
-  final lightTheme = ThemeData(brightness: Brightness.light, primaryColor: Colors.purple, appBarTheme: AppBarTheme(backgroundColor: Colors.deepPurpleAccent, foregroundColor: Colors.white));
-  final darkTheme = ThemeData(brightness: Brightness.dark, primaryColor: Colors.purple, appBarTheme: AppBarTheme(backgroundColor: Colors.deepPurpleAccent, foregroundColor: Colors.white));
+  final lightTheme = ThemeData(
+    brightness: Brightness.light,
+    primaryColor: '#322448'.toColor(), //
+    appBarTheme: AppBarTheme(backgroundColor: '#322448'.toColor(), foregroundColor: Colors.white),
+  );
+  final darkTheme = ThemeData(
+    brightness: Brightness.dark,
+    primaryColor: '#322448'.toColor(), //
+    appBarTheme: AppBarTheme(backgroundColor: '#322448'.toColor(), foregroundColor: Colors.white),
+  );
 
   @override
   Widget build(BuildContext context) {

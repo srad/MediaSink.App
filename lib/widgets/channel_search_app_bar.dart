@@ -1,11 +1,19 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 class ChannelSearchAppBar extends StatefulWidget implements PreferredSizeWidget {
   final Function(String)? onSearchChanged;
   final Function(bool)? onFav;
   final Function()? onAdd;
+  final bool isFav;
 
-  const ChannelSearchAppBar({super.key, this.onSearchChanged, this.onFav, this.onAdd});
+  const ChannelSearchAppBar({
+    super.key,
+    this.onSearchChanged,
+    this.onFav,
+    this.onAdd,
+    required this.isFav,
+  });
 
   @override
   _ChannelSearchAppBarState createState() => _ChannelSearchAppBarState();
@@ -17,24 +25,30 @@ class ChannelSearchAppBar extends StatefulWidget implements PreferredSizeWidget 
 class _ChannelSearchAppBarState extends State<ChannelSearchAppBar> {
   final TextEditingController _searchController = TextEditingController();
   bool _showClearIcon = false;
-  bool _fav = false;
+  Timer? _debounce;
 
-  @override
-  void initState() {
-    super.initState();
-    // Adding listener to the TextEditingController to track text changes
-    _searchController.addListener(() {
+  void _onSearchChanged() {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () {
       if (widget.onSearchChanged != null) {
         widget.onSearchChanged!(_searchController.text);
       }
-      setState(() {
-        _showClearIcon = _searchController.text.isNotEmpty;
-      });
+    });
+
+    setState(() {
+      _showClearIcon = _searchController.text.isNotEmpty;
     });
   }
 
   @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -43,7 +57,17 @@ class _ChannelSearchAppBarState extends State<ChannelSearchAppBar> {
   Widget build(BuildContext context) {
     return AppBar(
       automaticallyImplyLeading: false,
-      title: TextField(controller: _searchController, decoration: InputDecoration(hintText: 'Search channels...', border: InputBorder.none, hintStyle: TextStyle(color: Colors.white70)), style: TextStyle(color: Colors.white), cursorColor: Colors.white),
+      title: TextField(
+        autofocus: false,
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: 'Search channels...',
+          border: InputBorder.none,
+          hintStyle: TextStyle(color: Colors.white70),
+        ),
+        style: TextStyle(color: Colors.white),
+        cursorColor: Colors.white,
+      ),
       actions: [
         if (_showClearIcon)
           IconButton(
@@ -55,13 +79,10 @@ class _ChannelSearchAppBarState extends State<ChannelSearchAppBar> {
         IconButton(
           onPressed: () {
             setState(() {
-              _fav = !_fav;
+              widget.onFav?.call(!widget.isFav);
             });
-            if (widget.onFav != null) {
-              widget.onFav!(_fav);
-            }
           },
-          icon: Icon(Icons.favorite, color: _fav ? Colors.pink : null),
+          icon: Icon(Icons.favorite, color: widget.isFav ? Colors.pink : null),
         ),
         IconButton(
           onPressed: () {
