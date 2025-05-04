@@ -58,19 +58,19 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
             return Text('Error');
           } else if (snapshot.hasData) {
             final channel = snapshot.data!;
+            if (channel.recordingsCount == 0) return SizedBox.shrink();
             return BottomAppBar(
-              height: 50,
-              color: Colors.grey.shade200,
+              height: 70,
               child: Row(
                 children: [
-                  Text('Videos: ${channel.recordingsCount}', style: TextStyle(fontSize: 16, color: Colors.black87)),
+                  Chip(label: Text('Videos: ${channel.recordingsCount}')),
                   Spacer(),
-                  Text('Total size: ${channel.recordingsSize!.toGB()}', style: TextStyle(fontSize: 16, color: Colors.black87)), //
+                  Chip(label: Text('Total size: ${channel.recordingsSize!.toGB()}')), //
                 ],
               ),
             );
           } else {
-            return Text('No data');
+            return SizedBox.shrink();
           }
         },
       ),
@@ -86,7 +86,15 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
             _channel = data;
 
             return (_channel!.recordingsCount == 0)
-                ? Center(child: Text("No Videos", style: TextStyle(fontSize: 24)))
+                ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('😩', style: TextStyle(fontSize: 100)),
+                      Text("Empty", style: TextStyle(fontSize: 24)), //
+                    ],
+                  ),
+                )
                 : ListView(
                   children: [
                     // Display recordings with play buttons

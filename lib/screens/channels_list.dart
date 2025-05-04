@@ -31,7 +31,7 @@ class _ChannelListScreenState extends State<ChannelListScreen> with TickerProvid
 
   List<ServicesChannelInfo> get _favourites => _channels.where((x) => x.fav == true).toList();
 
-  List<ServicesChannelInfo> get _searchResult => _channels.where((x) => (x.displayName ?? '').contains(_search)).toList();
+  List<ServicesChannelInfo> get _searchResult => _channels.where((x) => (x.displayName ?? '').toLowerCase().contains(_search.toLowerCase())).toList();
 
   bool _showFavs = false;
   List<ServicesChannelInfo> _channels = [];
@@ -84,7 +84,7 @@ class _ChannelListScreenState extends State<ChannelListScreen> with TickerProvid
           isFav: _showFavs,
         ),
         // --- Add TabBar ---
-        bottom: !_showFavs || _search.isEmpty ? TabBar(controller: _tabController, labelColor: Color.alphaBlend(Colors.white.withValues(alpha: 0.8), Theme.of(context).primaryColor), tabs: const [Tab(icon: Icon(Icons.fiber_manual_record, color: Colors.red), text: 'Recording'), Tab(icon: Icon(Icons.videocam_off), text: 'Offline'), Tab(icon: Icon(Icons.pause), text: 'Disabled')]) : null, // No TabBar when showing favourites
+        bottom: !_showFavs || _search.isEmpty ? TabBar(controller: _tabController, labelColor: Color.alphaBlend(Colors.white.withValues(alpha: 0.8), Theme.of(context).primaryColor), tabs: const [Tab(icon: Icon(Icons.fiber_manual_record, color: Colors.red), text: 'Recording'), Tab(icon: Icon(Icons.videocam_off), text: 'Offline'), Tab(icon: Icon(Icons.pause), text: 'Paused')]) : null, // No TabBar when showing favourites
       ),
       drawer: AppDrawer(), // Original Drawer
       body: FutureBuilder<List<ServicesChannelInfo>>(
@@ -126,7 +126,7 @@ class _ChannelListScreenState extends State<ChannelListScreen> with TickerProvid
                 // Build lists for each tab
                 _buildChannelList(_recordingChannels, 'Recording'),
                 _buildChannelList(_offlineChannels, 'Offline'),
-                _buildChannelList(_disabledChannels, 'Disabled'),
+                _buildChannelList(_disabledChannels, 'Paused'),
               ],
             );
           }
