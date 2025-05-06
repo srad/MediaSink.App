@@ -10,7 +10,7 @@ part 'services_channel_info.g.dart';
 
 @JsonSerializable()
 class ServicesChannelInfo {
-  const ServicesChannelInfo({
+  ServicesChannelInfo({
     this.channelId,
     this.channelName,
     this.createdAt,
@@ -39,9 +39,9 @@ class ServicesChannelInfo {
   final String? createdAt;
   final bool? deleted;
   final String? displayName;
-  final bool? fav;
+  bool? fav;
   final bool? isOnline;
-  final bool? isPaused;
+  bool? isPaused;
   final bool? isRecording;
   final bool? isTerminating;
   final int? minDuration;

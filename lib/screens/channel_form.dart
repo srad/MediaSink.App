@@ -4,7 +4,7 @@ import 'package:mediasink_app/api/export.dart';
 import 'package:mediasink_app/rest_client_factory.dart';
 import 'package:mediasink_app/utils/utils.dart';
 import 'package:mediasink_app/utils/validators.dart';
-import 'package:mediasink_app/widgets/messages.dart';
+import 'package:mediasink_app/widgets/snack_utils.dart';
 
 class ChannelForm {
   int? channelId;
@@ -41,6 +41,8 @@ class _ChannelFormScreenState extends State<ChannelFormScreen> {
   bool _isPaused = false;
   bool _saving = false;
 
+  bool get isEdit => widget.channel != null;
+
   @override
   void initState() {
     super.initState();
@@ -68,20 +70,30 @@ class _ChannelFormScreenState extends State<ChannelFormScreen> {
   }
 
   void _submit() async {
+    final messenger = ScaffoldMessenger.of(context);
     try {
       setState(() {
         _saving = true;
       });
       if (_formKey.currentState!.validate()) {
-        final newChannel = RequestsChannelRequest(channelName: _channelNameController.text.trim(), displayName: _displayNameController.text.trim(), skipStart: int.parse(_skipStartController.text), minDuration: int.parse(_minDurationController.text), url: _urlController.text.trim(), tags: _tagsController.text.split(',').map((e) => e.trim()).toList(), fav: _fav, isPaused: _isPaused);
-        final client = await RestClientFactory.create();
-        final result = await client.channels.postChannels(channelRequest: newChannel);
-        if (mounted) snackOk(context, const Text('Saved'));
-        await Future.delayed(Duration(seconds: 3)); // Wait for a moment for the data propagate
-        if (mounted) Navigator.pop(context, result); // return channel to caller
+        final channelData = RequestsChannelRequest(channelName: _channelNameController.text.trim(), displayName: _displayNameController.text.trim(), skipStart: int.parse(_skipStartController.text), minDuration: int.parse(_minDurationController.text), url: _urlController.text.trim(), tags: _tagsController.text.split(',').map((e) => e.trim()).toList(), fav: _fav, isPaused: _isPaused);
+
+        if (isEdit) {
+          // Edit
+          final client = await RestClientFactory.create();
+          final newChannel = await client.channels.patchChannelsId(id: widget.channel!.channelId!, channelRequest: channelData);
+          if (mounted) messenger.showOk('Saved');
+          if (mounted) Navigator.pop(context, newChannel); // return channel to caller
+        } else {
+          // Create
+          final client = await RestClientFactory.create();
+          final channelInfo = await client.channels.postChannels(channelRequest: channelData);
+          if (mounted) messenger.showOk('Saved');
+          if (mounted) Navigator.pop(context, channelInfo); // return channel to caller
+        }
       }
     } catch (e) {
-      if (mounted) snackErr(context, Text(e.toString()));
+      if (mounted) messenger.showError(e.toString());
     } finally {
       setState(() {
         _saving = false;
@@ -91,8 +103,6 @@ class _ChannelFormScreenState extends State<ChannelFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isEdit = widget.channel != null;
-
     return Scaffold(
       appBar: AppBar(title: Text(isEdit ? 'Edit Channel' : 'New Channel')),
       body: Padding(

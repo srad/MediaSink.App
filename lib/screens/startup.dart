@@ -31,7 +31,7 @@ class _StartupScreen extends State<StartupScreen> {
     await Future.delayed(const Duration(milliseconds: 500)); // optional splash delay
 
     if (credentialsValid) {
-      Navigator.of(context).pushReplacementNamed('/channels');
+      Navigator.of(context).pushReplacementNamed('/streams');
     } else {
       Navigator.of(context).pushReplacementNamed('/settings', arguments: 'Please enter server URL, username and password.');
     }

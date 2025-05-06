@@ -2,6 +2,7 @@ import 'package:mediasink_app/api/export.dart';
 
 extension ServicesChannelInfoCopyWith on ServicesChannelInfo {
   ServicesChannelInfo copyWith({
+    List<DatabaseRecording>? recordings,
     int? channelId,
     String? createdAt,
     bool? deleted,
@@ -21,6 +22,7 @@ extension ServicesChannelInfoCopyWith on ServicesChannelInfo {
     String? preview, //
   }) {
     return ServicesChannelInfo(
+      recordings: recordings ?? this.recordings,
       channelId: channelId ?? this.channelId,
       createdAt: createdAt ?? this.createdAt,
       deleted: deleted ?? this.deleted,

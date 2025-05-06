@@ -1,14 +1,18 @@
-import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:mediasink_app/api/export.dart';
 import 'package:mediasink_app/extensions/file.dart';
 import 'package:mediasink_app/extensions/recording.dart';
 import 'package:mediasink_app/extensions/time.dart';
+import 'package:mediasink_app/models/video.dart';
 import 'package:mediasink_app/rest_client_factory.dart';
 import 'package:mediasink_app/screens/video_player.dart';
 import 'package:mediasink_app/widgets/confirm_dialog.dart';
-import 'package:mediasink_app/widgets/messages.dart';
+import 'package:mediasink_app/widgets/delete_button.dart';
+import 'package:mediasink_app/widgets/fav_button.dart';
+import 'package:mediasink_app/widgets/snack_utils.dart';
+import 'package:mediasink_app/widgets/pause_switch.dart';
+import 'package:mediasink_app/widgets/video_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
@@ -23,16 +27,15 @@ class ChannelDetailsScreen extends StatefulWidget {
 }
 
 class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
-  late Future<ServicesChannelInfo> _channelDetails;
-  late String? _serverUrl;
-
   ServicesChannelInfo? _channel;
+  late String? _serverUrl;
+  bool _isPausing = false;
+  bool _isFaving = false;
 
   @override
   void initState() {
     super.initState();
-    _loadSettings();
-    _channelDetails = fetchChannelDetails(widget.channelId);
+    _loadSettings().then((_) => _fetchChannelDetails(widget.channelId));
   }
 
   Future<void> _loadSettings() async {
@@ -40,140 +43,51 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
     _serverUrl = prefs.getString('serverUrl');
   }
 
-  Future<ServicesChannelInfo> fetchChannelDetails(int channelId) async {
+  Future<void> _fetchChannelDetails(int channelId) async {
     final api = await RestClientFactory.create();
     final channel = await api.channels.getChannelsId(id: channelId);
     channel.recordings?.sort((a, b) => DateTime.parse(b.createdAt!).compareTo(DateTime.parse(a.createdAt!)));
-    return channel;
+    setState(() {
+      _channel = channel;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
-      bottomNavigationBar: FutureBuilder(
-        future: _channelDetails,
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Text('Error');
-          } else if (snapshot.hasData) {
-            final channel = snapshot.data!;
-            if (channel.recordingsCount == 0) return SizedBox.shrink();
-            return BottomAppBar(
-              height: 70,
-              child: Row(
-                children: [
-                  Chip(label: Text('Videos: ${channel.recordingsCount}')),
-                  Spacer(),
-                  Chip(label: Text('Total size: ${channel.recordingsSize!.toGB()}')), //
-                ],
-              ),
-            );
-          } else {
-            return SizedBox.shrink();
-          }
-        },
-      ),
-      body: FutureBuilder<ServicesChannelInfo>(
-        future: _channelDetails,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (snapshot.hasData) {
-            final data = snapshot.data!;
-            _channel = data;
-
-            return (_channel!.recordingsCount == 0)
-                ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(height: 260, width: 260, child: Image.asset('assets/cat3.png', filterQuality: FilterQuality.high)),
-                      Text('Empty', style: TextStyle(fontSize: 24)), //
-                    ],
-                  ),
-                )
-                : ListView(
+      bottomNavigationBar:
+          (_channel != null)
+              ? BottomAppBar(
+                height: 70,
+                child: Row(
                   children: [
-                    // Display recordings with play buttons
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(),
-                      itemCount: _channel!.recordings?.length,
-                      itemBuilder: (context, index) {
-                        final recording = _channel!.recordings?[index];
-
-                        return Card(
-                          margin: const EdgeInsets.all(6.0),
-                          elevation: 4,
-                          child: Column(
-                            children: [
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.push(context, MaterialPageRoute(builder: (context) => VideoPlayerScreen(title: _channel!.channelName!, videoUrl: '$_serverUrl/recordings/${recording!.pathRelative}')));
-                                },
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
-                                      child: CachedNetworkImage(
-                                        imageUrl: '$_serverUrl/recordings/${recording?.previewCover ?? _channel!.preview}',
-                                        fit: BoxFit.cover,
-                                        height: 180,
-                                        width: double.infinity,
-                                        placeholder:
-                                            (context, url) => const SizedBox(
-                                              height: 180,
-                                              child: Center(child: CircularProgressIndicator()), //
-                                            ),
-                                        errorWidget:
-                                            (context, url, error) => Container(
-                                              height: 180,
-                                              color: Colors.grey[300],
-                                              child: const Center(child: Icon(Icons.broken_image, size: 40)), //
-                                            ),
-                                      ),
-                                    ),
-                                    const Icon(Icons.play_circle_fill, size: 64, color: Colors.white70),
-                                  ],
-                                ),
-                              ),
-                              // Play button
-                              Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                                child: Row(
-                                  children: [
-                                    Text(recording!.duration!.toHHMMSS()),
-                                    const SizedBox(width: 15),
-                                    Text(recording.size!.toGB()),
-                                    const SizedBox(width: 15),
-                                    Text('${timeago.format(DateTime.parse(recording.createdAt!), locale: 'en_short')} ago'),
-                                    const Spacer(),
-                                    IconButton(visualDensity: VisualDensity.compact, padding: EdgeInsets.zero, onPressed: () => {}, icon: Icon(Icons.download_rounded)),
-                                    IconButton(visualDensity: VisualDensity.compact, padding: EdgeInsets.zero, onPressed: () => bookmark(recording), icon: Icon(recording.bookmark == true ? Icons.favorite_rounded : Icons.favorite_border_rounded, color: recording.bookmark == true ? Colors.pink : null)),
-                                    IconButton(visualDensity: VisualDensity.compact, padding: EdgeInsets.zero, onPressed: () => delete(recording), icon: Icon(Icons.delete_rounded, color: Colors.red.shade400)),
-                                  ], //
-                                ),
-                              ), //
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                );
-          } else {
-            return const Center(child: Text('No data available.'));
-          }
-        },
-      ),
+                    Icon(Icons.sd_storage_rounded, color: Theme.of(context).primaryColor, size: 22), //
+                    const SizedBox(width: 5),
+                    Text('${_channel!.recordings?.fold<int>(0, (prev, element) => prev + (element.size ?? 0)).toGB()}', style: const TextStyle(fontSize: 14)),
+                    const SizedBox(width: 10),
+                    Icon(Icons.videocam_rounded, color: Theme.of(context).primaryColor, size: 22 + 4),
+                    const SizedBox(width: 5),
+                    Text('${_channel!.recordings?.length ?? 0}', style: const TextStyle(fontSize: 14)),
+                    Spacer(),
+                    DeleteButton(onPressed: deleteChannel, iconOnly: true, iconSize: 30),
+                    PauseButton(isPaused: _channel?.isPaused == true, onPressed: () => _togglePause(), isBusy: _isPausing, iconSize: 30),
+                    FavButton(onPressed: favChannel, isBusy: _isFaving, isFav: _channel!.fav!, iconSize: 30),
+                  ], //
+                ),
+              )
+              : null,
+      body:
+          (_channel == null)
+              ? const Center(child: CircularProgressIndicator())
+              : (_channel?.recordingsCount == 0)
+              ? const Center(child: Text('No data available.'))
+              : _buildCard(),
     );
   }
 
-  Future<void> bookmark(DatabaseRecording recording) async {
+  Future<void> bookmarkVideo(DatabaseRecording recording) async {
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final client = await RestClientFactory.create();
       if (recording.bookmark == true) {
@@ -188,16 +102,16 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
           _channel!.recordings?[index!] = recording.copyWith(bookmark: !recording.bookmark!);
         }
       });
-      if (mounted) snackOk(context, const Text('Saved'));
+      if (mounted) messenger.showOk('Saved');
     } catch (e) {
-      if (mounted) snackErr(context, Text(e.toString()));
+      if (mounted) messenger.showError(e.toString());
     }
   }
 
-  Future<void> delete(DatabaseRecording recording) async {
+  Future<void> deleteVideo(DatabaseRecording recording) async {
+    final messenger = ScaffoldMessenger.of(context);
     try {
-      confirm(
-        context: context,
+      await context.confirm(
         title: const Text("Confirm"),
         content: const Text('Do you want to delete the file?'), //
         onConfirm: () async {
@@ -206,11 +120,155 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
           setState(() {
             _channel!.recordings?.removeWhere((rec) => rec.recordingId == recording.recordingId);
           });
-          if (mounted) snackOk(context, const Text('Deleted'));
+          if (mounted) messenger.showOk('Deleted');
         },
       );
     } catch (e) {
-      if (mounted) snackErr(context, Text(e.toString()));
+      if (mounted) messenger.showError(e.toString());
+    }
+  }
+
+  Future<void> favChannel() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      setState(() {
+        _isFaving = true;
+      });
+      final channel = _channel!;
+      final int id = channel.channelId!;
+      final bool currentFavStatus = channel.fav!;
+      final client = await RestClientFactory.create();
+
+      if (currentFavStatus == true) {
+        await client.channels.patchChannelsIdUnfav(id: id);
+      } else {
+        await client.channels.patchChannelsIdFav(id: id);
+      }
+      setState(() {
+        _channel!.fav = !currentFavStatus;
+      });
+      if (mounted) messenger.showOk('Saved');
+    } catch (e) {
+      if (mounted) messenger.showError('Error updating favourite: $e');
+    } finally {
+      setState(() {
+        _isFaving = false;
+      });
+    }
+  }
+
+  Widget _buildCard() {
+    return (_channel!.recordingsCount == 0)
+        ? Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(height: 260, width: 260, child: Image.asset('assets/cat3.png', filterQuality: FilterQuality.high)),
+              Text('Empty', style: TextStyle(fontSize: 24)), //
+            ],
+          ),
+        )
+        : ListView(
+          children: [
+            ListView.builder(
+              shrinkWrap: true,
+              physics: NeverScrollableScrollPhysics(),
+              itemCount: _channel!.recordings?.length,
+              itemBuilder: (context, index) {
+                if (_channel == null || _channel?.recordings == null) return SizedBox.shrink();
+                final channel = _channel!;
+
+                final item = channel.recordings?[index];
+                if (item == null) return SizedBox.shrink();
+                final video = item!;
+
+                return VideoCard(
+                  payload: video,
+                    video: Video(
+                        videoId: video.recordingId!,
+                        duration: video.duration!,
+                        size: video.size!,
+                        bookmark: video.bookmark!,
+                        createdAt: DateTime.tryParse(video.createdAt!)??DateTime.now(),
+                        previewCover: '$_serverUrl/recordings/${video.previewCover ?? channel.preview}',//
+                    ),
+                    onBookmark: (p0) => bookmarkVideo(p0),
+                    onDelete: (p0) => deleteVideo(p0),
+                    onTapVideo: () => Navigator.push(context, MaterialPageRoute(builder: (context) => VideoPlayerScreen(title: _channel!.channelName!, videoUrl: '$_serverUrl/recordings/${video.pathRelative}'))),//
+                );
+              },
+            ),
+          ],
+        );
+  }
+
+  Future<void> _togglePause() async {
+    if (_channel == null) return;
+    final channel = _channel!;
+
+    await context.confirm(
+      title: Text('Confirm'),
+      content: Text('Do you want to ${channel.isPaused == true ? 'resume' : 'pause'} stream recording for this channel?'),
+      onConfirm: () async {
+        Navigator.pop(context, 'OK'); // Close dialog first
+        await _togglePauseExecute(channel); // Then execute async action
+      },
+    );
+  }
+
+  Future<void> _togglePauseExecute(final ServicesChannelInfo channel) async {
+    final messenger = ScaffoldMessenger.of(context);
+
+    final int id = channel.channelId!;
+    try {
+      final api = await RestClientFactory.create();
+
+      setState(() {
+        _isPausing = true;
+      });
+
+      if (channel.isPaused!) {
+        await api.channels.postChannelsIdResume(id: id);
+      } else {
+        await api.channels.postChannelsIdPause(id: id);
+      }
+
+      setState(() {
+        channel.isPaused = !channel.isPaused!;
+      });
+      if (mounted) messenger.showOk('Channel state updated');
+    } catch (e) {
+      if (mounted) messenger.showError('Failed to update channel: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPausing = false;
+        });
+      }
+    }
+  }
+
+  void deleteChannel() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await context.confirm(
+        title: const Text('Confirm'),
+        content: Text('Do you want to delete the channel: ${_channel!.displayName}?'),
+        onConfirm: () async {
+          final client = await RestClientFactory.create();
+          await client.channels.deleteChannelsId(id: _channel!.channelId!);
+
+          messenger.showOk('Channel "${_channel?.displayName}" deleted');
+
+          // First pop the dialog
+          Navigator.of(context, rootNavigator: true).pop();
+
+          // Then pop the screen (after the dialog is dismissed)
+          Navigator.of(context).pop(); // or use a named route if needed
+        },
+      );
+    } catch (e) {
+      if (mounted) messenger.showError(e.toString());
     }
   }
 }
