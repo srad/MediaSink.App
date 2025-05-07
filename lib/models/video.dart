@@ -5,6 +5,8 @@ class Video {
   final DateTime createdAt;
   bool bookmark;
   final String previewCover;
+  final String url;
+  final String filename;
 
   // Constructor
   Video({
@@ -13,6 +15,8 @@ class Video {
     required this.size,
     required this.createdAt,
     required this.previewCover,
+    required this.url,
+    required this.filename,
     this.bookmark = false, // Default value for bookmark is false
   });
 }

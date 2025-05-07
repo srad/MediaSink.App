@@ -43,10 +43,12 @@ class _VideosFilterScreenState extends State<VideosFilterScreen> {
           .map(
             (recording) => Video(
               videoId: recording.recordingId!,
+              url: '$_serverUrl/recordings/${recording.pathRelative}',
+              filename: recording.filename,
               duration: recording.duration!,
               size: recording.size!,
               createdAt: DateTime.parse(recording.createdAt!),
-              previewCover: '$_serverUrl/recordings/${recording.previewCover ?? ''}', //, //
+              previewCover: '$_serverUrl/recordings/${recording.previewCover}', //
             ),
           )
           .toList();
@@ -79,7 +81,15 @@ class _VideosFilterScreenState extends State<VideosFilterScreen> {
                   itemCount: videos.length,
                   itemBuilder: (context, index) {
                     final video = videos[index];
-                    return VideoCard(video: video, onBookmark: (p0) => {}, onDelete: (p0) => {}, onTapVideo: () => {}, payload: video, showDownload: false);
+                    return VideoCard(
+                      onBookmarked: _bookmarked,
+                      onDeleted: _deleted,
+                      onError: _error,
+                      video: video,
+                      onTapVideo: () => {},
+                      payload: video,
+                      showDownload: false, //
+                    );
                   },
                 );
               },
@@ -99,16 +109,8 @@ class _VideosFilterScreenState extends State<VideosFilterScreen> {
             child: DropdownButtonFormField<String>(
               value: _sortBy,
               isDense: true,
-              decoration: const InputDecoration(
-                labelText: 'Sort by',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              ),
-              items: const [
-                DropdownMenuItem(value: 'created_at', child: Text('Date')),
-                DropdownMenuItem(value: 'size', child: Text('Size')),
-                DropdownMenuItem(value: 'duration', child: Text('Duration')),
-              ],
+              decoration: const InputDecoration(labelText: 'Sort by', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
+              items: const [DropdownMenuItem(value: 'created_at', child: Text('Date')), DropdownMenuItem(value: 'size', child: Text('Size')), DropdownMenuItem(value: 'duration', child: Text('Duration'))],
               onChanged: (value) {
                 if (value != null) {
                   setState(() {
@@ -124,15 +126,8 @@ class _VideosFilterScreenState extends State<VideosFilterScreen> {
             child: DropdownButtonFormField<String>(
               value: _order,
               isDense: true,
-              decoration: const InputDecoration(
-                labelText: 'Order',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              ),
-              items: const [
-                DropdownMenuItem(value: 'asc', child: Text('Asc')),
-                DropdownMenuItem(value: 'desc', child: Text('Desc')),
-              ],
+              decoration: const InputDecoration(labelText: 'Order', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
+              items: const [DropdownMenuItem(value: 'asc', child: Text('Asc')), DropdownMenuItem(value: 'desc', child: Text('Desc'))],
               onChanged: (value) {
                 if (value != null) {
                   setState(() {
@@ -148,14 +143,8 @@ class _VideosFilterScreenState extends State<VideosFilterScreen> {
             child: DropdownButtonFormField<int>(
               value: _limit,
               isDense: true,
-              decoration: const InputDecoration(
-                labelText: 'Limit',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              ),
-              items: const [10, 20, 50, 100]
-                  .map((e) => DropdownMenuItem(value: e, child: Text('$e')))
-                  .toList(),
+              decoration: const InputDecoration(labelText: 'Limit', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
+              items: const [10, 20, 50, 100].map((e) => DropdownMenuItem(value: e, child: Text('$e'))).toList(),
               onChanged: (value) {
                 if (value != null) {
                   setState(() {
@@ -170,4 +159,12 @@ class _VideosFilterScreenState extends State<VideosFilterScreen> {
       ),
     );
   }
+
+  void _bookmarked(Video p1) {
+
+  }
+
+  void _deleted(Video p1) {}
+
+  void _error(Video p1, String p2) {}
 }

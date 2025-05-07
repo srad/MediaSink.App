@@ -86,48 +86,6 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
     );
   }
 
-  Future<void> bookmarkVideo(DatabaseRecording recording) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final client = await RestClientFactory.create();
-      if (recording.bookmark == true) {
-        await client.recordings.patchRecordingsIdUnfav(id: recording.recordingId!);
-      } else {
-        await client.recordings.patchRecordingsIdFav(id: recording.recordingId!);
-      }
-      setState(() {
-        final index = _channel!.recordings?.indexWhere((rec) => rec.recordingId == recording.recordingId);
-        if (index != -1) {
-          // Use the original copyWith extension
-          _channel!.recordings?[index!] = recording.copyWith(bookmark: !recording.bookmark!);
-        }
-      });
-      if (mounted) messenger.showOk('Saved');
-    } catch (e) {
-      if (mounted) messenger.showError(e.toString());
-    }
-  }
-
-  Future<void> deleteVideo(DatabaseRecording recording) async {
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      await context.confirm(
-        title: const Text("Confirm"),
-        content: const Text('Do you want to delete the file?'), //
-        onConfirm: () async {
-          final client = await RestClientFactory.create();
-          await client.recordings.deleteRecordingsId(id: recording.recordingId!);
-          setState(() {
-            _channel!.recordings?.removeWhere((rec) => rec.recordingId == recording.recordingId);
-          });
-          if (mounted) messenger.showOk('Deleted');
-        },
-      );
-    } catch (e) {
-      if (mounted) messenger.showError(e.toString());
-    }
-  }
-
   Future<void> favChannel() async {
     final messenger = ScaffoldMessenger.of(context);
     try {
@@ -180,21 +138,24 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
 
                 final item = channel.recordings?[index];
                 if (item == null) return SizedBox.shrink();
-                final video = item!;
+                final recording = item!;
 
                 return VideoCard(
-                  payload: video,
-                    video: Video(
-                        videoId: video.recordingId!,
-                        duration: video.duration!,
-                        size: video.size!,
-                        bookmark: video.bookmark!,
-                        createdAt: DateTime.tryParse(video.createdAt!)??DateTime.now(),
-                        previewCover: '$_serverUrl/recordings/${video.previewCover ?? channel.preview}',//
-                    ),
-                    onBookmark: (p0) => bookmarkVideo(p0),
-                    onDelete: (p0) => deleteVideo(p0),
-                    onTapVideo: () => Navigator.push(context, MaterialPageRoute(builder: (context) => VideoPlayerScreen(title: _channel!.channelName!, videoUrl: '$_serverUrl/recordings/${video.pathRelative}'))),//
+                  payload: recording,
+                  video: Video(
+                    videoId: recording.recordingId!,
+                    filename: recording.filename,
+                    url: '$_serverUrl/recordings/${recording.pathRelative}',
+                    duration: recording.duration!,
+                    size: recording.size!,
+                    bookmark: recording.bookmark!,
+                    createdAt: DateTime.tryParse(recording.createdAt!) ?? DateTime.now(),
+                    previewCover: '$_serverUrl/recordings/${recording.previewCover ?? channel.preview}', //
+                  ),
+                  onBookmarked: _videoBookmarked,
+                  onDeleted: _videoDeleted,
+                  onError: _errorDelete,
+                  onTapVideo: () => Navigator.push(context, MaterialPageRoute(builder: (context) => VideoPlayerScreen(title: _channel!.channelName!, videoUrl: '$_serverUrl/recordings/${recording.pathRelative}'))), //
                 );
               },
             ),
@@ -270,5 +231,28 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
     } catch (e) {
       if (mounted) messenger.showError(e.toString());
     }
+  }
+
+  _videoBookmarked(DatabaseRecording recording) {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() {
+      final index = _channel!.recordings?.indexWhere((rec) => rec.recordingId == recording.recordingId);
+      if (index != -1) {
+        _channel!.recordings?[index!] = recording.copyWith(bookmark: !recording.bookmark!);
+      }
+    });
+    if (mounted) messenger.showOk('Saved');
+  }
+
+  _videoDeleted(DatabaseRecording recording) {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() {
+      _channel!.recordings?.removeWhere((rec) => rec.recordingId == recording.recordingId);
+    });
+    if (mounted) messenger.showOk('Deleted');
+  }
+
+  _errorDelete(DatabaseRecording recording, String message) {
+    if (mounted) ScaffoldMessenger.of(context).showError(message);
   }
 }

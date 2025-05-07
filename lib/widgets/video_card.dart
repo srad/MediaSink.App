@@ -3,12 +3,18 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:mediasink_app/extensions/file.dart';
 import 'package:mediasink_app/extensions/time.dart';
 import 'package:mediasink_app/models/video.dart';
+import 'package:mediasink_app/rest_client_factory.dart';
+import 'package:mediasink_app/utils/http_utils.dart';
+import 'package:mediasink_app/widgets/confirm_dialog.dart';
+import 'package:mediasink_app/widgets/delete_button.dart';
+import 'package:mediasink_app/widgets/fav_button.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class VideoCard<T> extends StatelessWidget {
   final Video video;
-  final Function(T) onBookmark;
-  final Function(T) onDelete;
+  final Function(T)? onBookmarked;
+  final Function(T)? onDeleted;
+  final Function(T, String)? onError;
   final VoidCallback onTapVideo;
   final T payload;
   final bool showDownload;
@@ -16,11 +22,12 @@ class VideoCard<T> extends StatelessWidget {
   const VideoCard({
     super.key,
     required this.video,
-    required this.onBookmark,
-    required this.onDelete,
-    required this.onTapVideo, //
+    this.onBookmarked,
+    this.onDeleted,
+    required this.onTapVideo,
     required this.payload,
-    this.showDownload = true,
+    this.onError,
+    this.showDownload = true, //
   });
 
   @override
@@ -71,28 +78,50 @@ class VideoCard<T> extends StatelessWidget {
                   IconButton(
                     visualDensity: VisualDensity.compact,
                     padding: EdgeInsets.zero,
-                    onPressed: () => {}, // You can implement the download action here
+                    onPressed: () => _downloadVideo(video), // You can implement the download action here
                     icon: const Icon(Icons.download_rounded),
                   ),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  onPressed: () => onBookmark(payload),
-                  icon: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    transitionBuilder: (Widget child, Animation<double> animation) {
-                      final curvedAnimation = CurvedAnimation(parent: animation, curve: Curves.elasticOut);
-                      return ScaleTransition(scale: curvedAnimation, child: child);
-                    },
-                    child: Icon(Icons.favorite_rounded, key: ValueKey<bool>(video.bookmark == true), color: video.bookmark == true ? Colors.pink : Colors.grey),
-                  ),
-                ),
-                IconButton(visualDensity: VisualDensity.compact, padding: EdgeInsets.zero, onPressed: () => onDelete(payload), icon: Icon(Icons.delete_rounded, color: Colors.red.shade400)),
+                FavButton(isFav: video.bookmark, onPressed: () => _bookmarkVideo(context, video, payload)),
+                DeleteButton(onPressed: () => _deleteVideo(context, video, payload), iconOnly: true),
               ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future _bookmarkVideo(BuildContext context, Video recording, T payload) async {
+    try {
+      final client = await RestClientFactory.create();
+      if (recording.bookmark == true) {
+        await client.recordings.patchRecordingsIdUnfav(id: recording.videoId);
+      } else {
+        await client.recordings.patchRecordingsIdFav(id: recording.videoId);
+      }
+      if (onDeleted != null) onDeleted!(payload);
+    } catch (e) {
+      if (onError != null) onError!(payload, e.toString());
+    }
+  }
+
+  Future _deleteVideo(BuildContext context, Video recording, T payload) async {
+    try {
+      await context.confirm(
+        title: const Text("Confirm"),
+        content: const Text('Do you want to delete the file?'),
+        onConfirm: () async {
+          final client = await RestClientFactory.create();
+          await client.recordings.deleteRecordingsId(id: recording.videoId);
+          if (onBookmarked != null) onBookmarked!(payload);
+        },
+      );
+    } catch (e) {
+      if (onError != null) onError!(payload, e.toString());
+    }
+  }
+
+  Future _downloadVideo(Video video) async {
+    await HttpUtils.downloadAndSaveFile(fileUrl: video.url, suggestedFileName: video.filename);
   }
 }
