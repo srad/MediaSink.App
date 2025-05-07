@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mediasink_app/api/export.dart';
 import 'package:mediasink_app/simple_http_client.dart';
-import 'package:mediasink_app/widgets/video_card.dart';
+import 'package:mediasink_app/widgets/snack_utils.dart';
+import 'package:mediasink_app/widgets/video_list_builder.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/video.dart';
 
@@ -13,20 +14,32 @@ class VideosFilterScreen extends StatefulWidget {
 }
 
 class _VideosFilterScreenState extends State<VideosFilterScreen> {
-  late Future<List<Video>>? _futureVideos;
+  final ValueNotifier<List<Video>> _videoListNotifier = ValueNotifier([]);
+  bool _isLoading = true;
+
   String _sortBy = 'created_at';
   String _order = 'desc';
-  int _limit = 20;
+  int _limit = 25;
   late String? _serverUrl;
 
   @override
   void initState() {
     super.initState();
-    _loadSettings();
-    _futureVideos = _fetchVideos();
+    _loadSettings().then((_) => _loadVideos());
   }
 
-  Future<void> _loadSettings() async {
+  Future _loadVideos() async {
+    try {
+      final videos = await _fetchVideos();
+      _videoListNotifier.value = videos;
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showError('$e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     _serverUrl = prefs.getString('serverUrl');
   }
@@ -42,6 +55,7 @@ class _VideosFilterScreenState extends State<VideosFilterScreen> {
       return recordings
           .map(
             (recording) => Video(
+              bookmark: recording.bookmark == true,
               videoId: recording.recordingId!,
               url: '$_serverUrl/recordings/${recording.pathRelative}',
               filename: recording.filename,
@@ -56,46 +70,29 @@ class _VideosFilterScreenState extends State<VideosFilterScreen> {
     return [];
   }
 
+  Future<void> _refreshVideos() async {
+    await _loadVideos();
+    if (mounted) ScaffoldMessenger.of(context).showOk('Reloaded');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Video Grid")),
+      appBar: AppBar(title: const Text("Filter Videos")),
       body: Column(
         children: [
           _buildFilters(),
           Expanded(
-            child: FutureBuilder<List<Video>>(
-              future: _futureVideos,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError) {
-                  return Center(child: Text("Error: ${snapshot.error}"));
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text("No videos found"));
-                }
-
-                final videos = snapshot.data!;
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-                  itemCount: videos.length,
-                  itemBuilder: (context, index) {
-                    final video = videos[index];
-                    return VideoCard(
-                      onBookmarked: _bookmarked,
-                      onDeleted: _deleted,
-                      onError: _error,
-                      video: video,
-                      onTapVideo: () => {},
-                      payload: video,
-                      showDownload: false, //
-                    );
-                  },
-                );
+            child: VideoListBuilder(
+              isLoading: _isLoading,
+              videoListNotifier: _videoListNotifier,
+              onError: (video, message) {
+                if (mounted) ScaffoldMessenger.of(context).showError(message);
               },
+              onRefresh: _refreshVideos, //
             ),
           ),
-        ],
+        ], //
       ),
     );
   }
@@ -115,7 +112,7 @@ class _VideosFilterScreenState extends State<VideosFilterScreen> {
                 if (value != null) {
                   setState(() {
                     _sortBy = value;
-                    _futureVideos = _fetchVideos();
+                    _loadVideos();
                   });
                 }
               },
@@ -132,7 +129,7 @@ class _VideosFilterScreenState extends State<VideosFilterScreen> {
                 if (value != null) {
                   setState(() {
                     _order = value;
-                    _futureVideos = _fetchVideos();
+                    _loadVideos();
                   });
                 }
               },
@@ -144,12 +141,12 @@ class _VideosFilterScreenState extends State<VideosFilterScreen> {
               value: _limit,
               isDense: true,
               decoration: const InputDecoration(labelText: 'Limit', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
-              items: const [10, 20, 50, 100].map((e) => DropdownMenuItem(value: e, child: Text('$e'))).toList(),
+              items: const [25, 50, 100, 200, 500].map((e) => DropdownMenuItem(value: e, child: Text('$e'))).toList(),
               onChanged: (value) {
                 if (value != null) {
                   setState(() {
                     _limit = value;
-                    _futureVideos = _fetchVideos();
+                    _loadVideos();
                   });
                 }
               },
@@ -159,12 +156,4 @@ class _VideosFilterScreenState extends State<VideosFilterScreen> {
       ),
     );
   }
-
-  void _bookmarked(Video p1) {
-
-  }
-
-  void _deleted(Video p1) {}
-
-  void _error(Video p1, String p2) {}
 }

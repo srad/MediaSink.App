@@ -8,6 +8,7 @@ import 'package:mediasink_app/utils/http_utils.dart';
 import 'package:mediasink_app/widgets/confirm_dialog.dart';
 import 'package:mediasink_app/widgets/delete_button.dart';
 import 'package:mediasink_app/widgets/fav_button.dart';
+import 'package:mediasink_app/widgets/snack_utils.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class VideoCard<T> extends StatelessWidget {
@@ -29,6 +30,8 @@ class VideoCard<T> extends StatelessWidget {
     this.onError,
     this.showDownload = true, //
   });
+
+  final double _iconSize = 26;
 
   @override
   Widget build(BuildContext context) {
@@ -62,27 +65,67 @@ class VideoCard<T> extends StatelessWidget {
               ],
             ), //
           ),
-          // Play button
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            child: Row(
+            child: Column(
               children: [
-                const SizedBox(width: 4),
-                Text(video.duration.toHHMMSS()),
-                const SizedBox(width: 10),
-                Text(video.size.toGB()),
-                const SizedBox(width: 10),
-                Text('${timeago.format(video.createdAt)} ago'),
-                const Spacer(),
-                if (showDownload)
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    onPressed: () => _downloadVideo(video), // You can implement the download action here
-                    icon: const Icon(Icons.download_rounded),
+                Padding(
+                  padding: EdgeInsetsDirectional.symmetric(vertical: 6, horizontal: 0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.timer_rounded),
+                      const SizedBox(width: 5),
+                      Text(video.duration.toHHMMSS()),
+                      const SizedBox(width: 15),
+                      Icon(Icons.sd_storage_rounded),
+                      const SizedBox(width: 5),
+                      Text(video.size.toGB()),
+                      const SizedBox(width: 15),
+                      Icon(Icons.timelapse_rounded),
+                      const SizedBox(width: 5),
+                      Text(timeago.format(video.createdAt)), //
+                    ],
                   ),
-                FavButton(isFav: video.bookmark, onPressed: () => _bookmarkVideo(context, video, payload)),
-                DeleteButton(onPressed: () => _deleteVideo(context, video, payload), iconOnly: true),
+                ),
+                Padding(
+                  padding: EdgeInsetsDirectional.symmetric(vertical: 2, horizontal: 4),
+                  child: Row(
+                    children: [
+                      if (showDownload)
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          onPressed: () async {
+                            final result = await HttpUtils.downloadAndSaveFile(fileUrl: video.url, suggestedFileName: video.filename);
+                            switch (result) {
+                              case DownloadStatus.enqueued:
+                                if (context.mounted) ScaffoldMessenger.of(context).showOk('Enqueued download ...');
+                              case DownloadStatus.canceled:
+                                if (context.mounted) ScaffoldMessenger.of(context).showError('Canceled download');
+                              case DownloadStatus.error:
+                                if (context.mounted) ScaffoldMessenger.of(context).showError('Canceled download');
+                              case DownloadStatus.unknown:
+                                if (context.mounted) ScaffoldMessenger.of(context).showOk('Status unknown');
+                            }
+                          },
+                          icon: const Icon(Icons.download_rounded),
+                          iconSize: _iconSize,
+                        ),
+                      DeleteButton(onPressed: () => _deleteVideo(context, video, payload), iconOnly: true, iconSize: _iconSize),
+                      const Spacer(),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        onPressed: () => {},
+                        // You can implement the download action here
+                        icon: const Icon(Icons.local_movies_rounded),
+                        iconSize: _iconSize,
+                      ),
+                      FavButton(isFav: video.bookmark == true, onPressed: () => _bookmarkVideo(context, video, payload), iconSize: _iconSize), //
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
@@ -99,7 +142,7 @@ class VideoCard<T> extends StatelessWidget {
       } else {
         await client.recordings.patchRecordingsIdFav(id: recording.videoId);
       }
-      if (onDeleted != null) onDeleted!(payload);
+      if (onBookmarked != null) onBookmarked!(payload);
     } catch (e) {
       if (onError != null) onError!(payload, e.toString());
     }
@@ -113,15 +156,11 @@ class VideoCard<T> extends StatelessWidget {
         onConfirm: () async {
           final client = await RestClientFactory.create();
           await client.recordings.deleteRecordingsId(id: recording.videoId);
-          if (onBookmarked != null) onBookmarked!(payload);
+          if (onDeleted != null) onDeleted!(payload);
         },
       );
     } catch (e) {
       if (onError != null) onError!(payload, e.toString());
     }
-  }
-
-  Future _downloadVideo(Video video) async {
-    await HttpUtils.downloadAndSaveFile(fileUrl: video.url, suggestedFileName: video.filename);
   }
 }

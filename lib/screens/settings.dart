@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:mediasink_app/utils/permission_utils.dart';
 import 'package:mediasink_app/utils/utils.dart';
 import 'package:mediasink_app/widgets/app_drawer.dart';
 import 'package:mediasink_app/widgets/theme_provider.dart';
@@ -30,7 +31,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _formValid = false;
 
   bool _darkMode = false;
-  bool _notificationsEnabled = true;
+  bool _notificationsEnabled = false;
 
   bool _saved = false;
 
@@ -50,7 +51,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _usernameController.text = username;
       _passwordController.text = password;
       _darkMode = prefs.getBool('darkMode') ?? false;
-      _notificationsEnabled = prefs.getBool('notificationsEnabled') ?? true;
+      _notificationsEnabled = prefs.getBool('notificationsEnabled') ?? false;
       _saved = username != null && username.isNotEmpty && password != null && password.isNotEmpty;
     });
   }
@@ -77,16 +78,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('serverUrl', _serverUrlController.text.trim());
       await prefs.setBool('darkMode', _darkMode);
-      await prefs.setBool('notificationsEnabled', _notificationsEnabled);
 
       await _secureStorage.write(key: 'server_username', value: _usernameController.text.trim());
       await _secureStorage.write(key: 'server_password', value: _passwordController.text);
 
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings saved')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings saved')));
       _saved = true;
-    } catch(e) {
+    } catch (e) {
       final snackBar = SnackBar(content: Text(e.toString()));
-      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(snackBar);
     } finally {
       setState(() => _isSaving = false);
     }
@@ -138,7 +138,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               SwitchListTile(
                 title: const Text('Enable Notifications'),
                 value: _notificationsEnabled,
-                onChanged: (value) {
+                onChanged: (value) async {
+                  if (value) {
+                    final allowed = await PermissionUtils.requestNotificationPermissions();
+                    if (allowed) {
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setBool('notificationsEnabled', value);
+                    }
+                  }
                   setState(() => _notificationsEnabled = value);
                 },
               ), //

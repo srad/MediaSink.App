@@ -10,7 +10,7 @@ import 'package:mediasink_app/widgets/channel_search_app_bar.dart';
 import 'package:mediasink_app/widgets/confirm_dialog.dart';
 import 'package:mediasink_app/widgets/delete_button.dart';
 import 'package:mediasink_app/widgets/fav_button.dart';
-import 'package:mediasink_app/widgets/pause_switch.dart';
+import 'package:mediasink_app/widgets/pause_button.dart';
 import 'package:mediasink_app/widgets/snack_utils.dart';
 import 'package:mediasink_app/widgets/recording_indicator.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -23,21 +23,22 @@ class StreamsListScreen extends StatefulWidget {
 }
 
 class _StreamsListScreenState extends State<StreamsListScreen> with TickerProviderStateMixin {
-  late Future<List<ServicesChannelInfo>> _futureChannels;
+  final ValueNotifier<List<ServicesChannelInfo>> _channelsListNotifier = ValueNotifier([]);
+  bool _isLoading = true;
+
   String _search = "";
 
-  List<ServicesChannelInfo> get _recordingChannels => _channels.where((x) => x.isRecording == true).toList();
+  List<ServicesChannelInfo> get _recordingChannels => _channelsListNotifier.value.where((x) => x.isRecording == true).toList();
 
-  List<ServicesChannelInfo> get _offlineChannels => _channels.where((x) => x.isRecording == false && x.isPaused != true).toList();
+  List<ServicesChannelInfo> get _offlineChannels => _channelsListNotifier.value.where((x) => x.isRecording == false && x.isPaused != true).toList();
 
-  List<ServicesChannelInfo> get _disabledChannels => _channels.where((x) => x.isPaused == true).toList();
+  List<ServicesChannelInfo> get _disabledChannels => _channelsListNotifier.value.where((x) => x.isPaused == true).toList();
 
-  List<ServicesChannelInfo> get _favourites => _channels.where((x) => x.fav == true).toList();
+  List<ServicesChannelInfo> get _favourites => _channelsListNotifier.value.where((x) => x.fav == true).toList();
 
-  List<ServicesChannelInfo> get _searchResult => _channels.where((x) => (x.displayName ?? '').toLowerCase().contains(_search.toLowerCase())).toList();
+  List<ServicesChannelInfo> get _searchResult => _channelsListNotifier.value.where((x) => (x.displayName ?? '').toLowerCase().contains(_search.toLowerCase())).toList();
 
   bool _showFavs = false;
-  List<ServicesChannelInfo> _channels = [];
   final Set<int> _loadingChannelIds = {};
   final Set<int> _favingChannelIds = {};
   final double _iconSize = 28;
@@ -48,8 +49,25 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
   @override
   void initState() {
     super.initState();
-    _futureChannels = fetchChannels();
+    _loadChannels();
     _tabController = TabController(length: _numTabs, vsync: this);
+  }
+
+  Future _loadChannels() async {
+    _isLoading = true;
+    try {
+      final channels = await fetchChannels();
+      _channelsListNotifier.value = channels;
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showError('$e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future _refresh() async {
+    await _loadChannels();
+    if (mounted) ScaffoldMessenger.of(context).showOk('Reloaded');
   }
 
   @override
@@ -92,56 +110,33 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
         bottom: !_showFavs || !_showFavs && _search.isEmpty ? _tabs() : null, // No TabBar when showing favourites
       ),
       drawer: AppDrawer(), // Original Drawer
-      body: FutureBuilder<List<ServicesChannelInfo>>(
-        future: _futureChannels,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+      body: ValueListenableBuilder<List<ServicesChannelInfo>>(
+        valueListenable: _channelsListNotifier,
+        builder: (context, channels, _) {
+          if (_isLoading) {
             return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (snapshot.hasData) {
-            // Original logic to set channels once
-            // Check if _channels is empty OR if snapshot data differs significantly
-            // For simplicity, just assign if empty or let refresh handle updates.
-            if (_channels.isEmpty) {
-              _channels = snapshot.data!;
-            }
-            // If you want refresh to always use the latest fetched data:
-            // _channels = snapshot.data!;
-          } else {
-            // Handle case where snapshot has no data (but also no error)
-            _channels = [];
           }
 
-          // --- Replace conditional logic with TabBarView ---
+          if (channels.isEmpty) {
+            return const Center(child: Text("No channels"));
+          }
+
           Widget bodyContent;
           if (_search.isNotEmpty) {
             bodyContent = _buildChannelList(_searchResult, 'Search', key: const ValueKey('search_list'));
           } else if (_showFavs) {
-            // Show favourites list directly
             // Add key for AnimatedSwitcher if you wrap this later
             bodyContent = _buildChannelList(_favourites, 'Favs', key: const ValueKey('favs_list'));
           } else {
-            // Show TabBarView for other lists
             // Add key for AnimatedSwitcher if you wrap this later
             bodyContent = TabBarView(
               key: const ValueKey('tab_view'),
               controller: _tabController, // Link controller
-              children: [
-                // Build lists for each tab
-                _buildChannelList(_recordingChannels, 'Recording'),
-                _buildChannelList(_offlineChannels, 'Offline'),
-                _buildChannelList(_disabledChannels, 'Paused'),
-              ],
+              children: [_buildChannelList(_recordingChannels, 'Recording'), _buildChannelList(_offlineChannels, 'Offline'), _buildChannelList(_disabledChannels, 'Paused')],
             );
           }
 
-          // Keep AnimatedSwitcher if desired for the transition between favs/tabs
-          // Or remove if animation isn't needed here.
-          return AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: bodyContent, // The content is now either fav list or TabBarView
-          );
+          return AnimatedSwitcher(duration: const Duration(milliseconds: 300), child: bodyContent);
         },
       ),
     );
@@ -159,22 +154,7 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
     // Add PageStorageKey to preserve scroll state per list
     return RefreshIndicator(
       key: key,
-      onRefresh: () async {
-        // Original refresh logic
-        setState(() {
-          _futureChannels = fetchChannels();
-        });
-        try {
-          _channels = await _futureChannels;
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reloaded'), duration: Duration(seconds: 1)));
-          }
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Refresh failed: $e'), backgroundColor: Colors.red));
-          }
-        }
-      },
+      onRefresh: _refresh,
       child: ListView.builder(
         key: PageStorageKey(label), // Use label to preserve scroll position
         itemCount: channels.length,
@@ -277,10 +257,8 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
                       Icon(Icons.videocam_rounded, color: Theme.of(context).primaryColor, size: _iconSize),
                       const SizedBox(width: 5),
                       Text(channel.recordingsCount?.toString() ?? '0', style: const TextStyle(fontSize: 14)),
-                      Spacer(),
+                      const Spacer(),
                       DeleteButton(onPressed: () => deleteChannel(channel), iconSize: _iconSize, iconOnly: true),
-                      PauseButton(isPaused: channel.isPaused == true, onPressed: () => togglePause(channel), iconSize: _iconSize),
-                      FavButton(onPressed: () => favChannel(channel), isFav: channel.fav == true, isBusy: _favingChannelIds.contains(channel.channelId), iconSize: _iconSize),
                       IconButton(
                         padding: EdgeInsets.symmetric(horizontal: 10),
                         visualDensity: VisualDensity.compact,
@@ -291,6 +269,9 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
                         //
                         icon: const Icon(Icons.edit_rounded),
                       ),
+                      PauseButton(isPaused: channel.isPaused == true, onPressed: () => togglePause(channel), iconSize: _iconSize + 4),
+                      const SizedBox(width: 8),
+                      FavButton(onPressed: () => favChannel(channel), isFav: channel.fav == true, isBusy: _favingChannelIds.contains(channel.channelId), iconSize: _iconSize + 4),
                     ],
                   ),
                 ),
@@ -378,9 +359,9 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
       }
 
       setState(() {
-        final index = _channels.indexWhere((c) => c.channelId == id);
+        final index = _channelsListNotifier.value.indexWhere((c) => c.channelId == id);
         if (index != -1) {
-          _channels[index].isPaused = !channel.isPaused!;
+          _channelsListNotifier.value[index].isPaused = !channel.isPaused!;
         }
       });
       if (mounted) messenger.showOk('Channel state updated');
@@ -410,9 +391,9 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
       }
       // Original state update
       setState(() {
-        final index = _channels.indexWhere((c) => c.channelId == id);
+        final index = _channelsListNotifier.value.indexWhere((c) => c.channelId == id);
         if (index != -1) {
-          _channels[index].fav = !currentFavStatus;
+          _channelsListNotifier.value[index].fav = !currentFavStatus;
         }
       });
       if (mounted) messenger.showOk('Saved');
@@ -433,7 +414,7 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
           final client = await RestClientFactory.create();
           await client.channels.deleteChannelsId(id: channel.channelId!);
           setState(() {
-            _channels.removeWhere((c) => c.channelId == channel.channelId!);
+            _channelsListNotifier.value.removeWhere((c) => c.channelId == channel.channelId!);
           });
         },
       );
@@ -474,11 +455,7 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
       // Original code didn't handle the result, add if needed
     );
 
-    if (result != null && mounted) {
-      setState(() {
-        _futureChannels = fetchChannels(); // Re-fetch data
-      });
-    }
+    await _loadChannels();
   }
 
   PreferredSize _tabs() {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-import 'package:mediasink_app/api/export.dart';
 import 'package:mediasink_app/screens/channel_details.dart';
 import 'package:mediasink_app/screens/channel_form.dart';
 import 'package:mediasink_app/screens/channels_list.dart';
@@ -9,7 +9,9 @@ import 'package:mediasink_app/screens/streams_list.dart';
 import 'package:mediasink_app/screens/startup.dart';
 import 'package:mediasink_app/screens/About.dart';
 import 'package:mediasink_app/screens/settings.dart';
+import 'package:mediasink_app/screens/videos_bookmarked.dart';
 import 'package:mediasink_app/screens/videos_filter.dart';
+import 'package:mediasink_app/screens/videos_random.dart';
 import 'package:mediasink_app/widgets/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:fvp/fvp.dart' as fvp;
@@ -23,6 +25,12 @@ void main() async {
       'platforms': ['android', 'ios'],
     },
   ); // only these platforms will use this plugin implementation
+
+  await FlutterDownloader.initialize(
+      debug: false, // optional: set to false to disable printing logs to console (default: true)
+      ignoreSsl: true // option: set to false to disable working with http links (default: false)
+  );
+
   runApp(ChangeNotifierProvider(create: (_) => ThemeProvider(), child: MediaSinkApp()));
   // FlutterNativeSplash.remove();
 }
@@ -70,6 +78,8 @@ class _MediaSinkApp extends State<MediaSinkApp> {
         '/channel': (context) => ChannelDetailsScreen(channelId: ModalRoute.of(context)!.settings.arguments as int, title: ModalRoute.of(context)!.settings.arguments as String),
         '/channelForm': (context) => const ChannelFormScreen(),
         '/filter': (context) => const VideosFilterScreen(),
+        '/bookmarked': (context) => const VideosBookmarkedScreen(),
+        '/random': (context) => const VideosRandomScreen(),
         // '/channel': (context) {
         //   final videoId = ModalRoute.of(context)!.settings.arguments as int;
         //   return ChannelScreen(videoId: videoId);
