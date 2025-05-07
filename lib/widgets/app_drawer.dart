@@ -90,7 +90,7 @@ class _AppDrawerState extends State<AppDrawer> {
           _tile('Streams', '/streams', Icons.videocam_rounded),
           _tile('Channels', '/channels', Icons.grid_view_rounded),
           _tile('Query Videos', '/filter', Icons.query_builder),
-          _tile('Favourites', '/favs', Icons.favorite_rounded),
+          _tile('Favourites', '/bookmarked', Icons.favorite_rounded),
           _tile('Random Videos', '/random', Icons.question_mark),
           _tile('Settings', '/settings', Icons.settings),
           _tile('About', '/about', Icons.info),

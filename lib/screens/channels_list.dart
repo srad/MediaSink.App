@@ -53,7 +53,6 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
 
             return RefreshIndicator(
               onRefresh: () async {
-                // Original refresh logic
                 setState(() {
                   _futureChannels = fetchChannels();
                 });

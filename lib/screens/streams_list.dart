@@ -10,7 +10,7 @@ import 'package:mediasink_app/widgets/channel_search_app_bar.dart';
 import 'package:mediasink_app/widgets/confirm_dialog.dart';
 import 'package:mediasink_app/widgets/delete_button.dart';
 import 'package:mediasink_app/widgets/fav_button.dart';
-import 'package:mediasink_app/widgets/pause_switch.dart';
+import 'package:mediasink_app/widgets/pause_button.dart';
 import 'package:mediasink_app/widgets/snack_utils.dart';
 import 'package:mediasink_app/widgets/recording_indicator.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -277,10 +277,8 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
                       Icon(Icons.videocam_rounded, color: Theme.of(context).primaryColor, size: _iconSize),
                       const SizedBox(width: 5),
                       Text(channel.recordingsCount?.toString() ?? '0', style: const TextStyle(fontSize: 14)),
-                      Spacer(),
+                      const Spacer(),
                       DeleteButton(onPressed: () => deleteChannel(channel), iconSize: _iconSize, iconOnly: true),
-                      PauseButton(isPaused: channel.isPaused == true, onPressed: () => togglePause(channel), iconSize: _iconSize),
-                      FavButton(onPressed: () => favChannel(channel), isFav: channel.fav == true, isBusy: _favingChannelIds.contains(channel.channelId), iconSize: _iconSize),
                       IconButton(
                         padding: EdgeInsets.symmetric(horizontal: 10),
                         visualDensity: VisualDensity.compact,
@@ -291,6 +289,9 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
                         //
                         icon: const Icon(Icons.edit_rounded),
                       ),
+                      PauseButton(isPaused: channel.isPaused == true, onPressed: () => togglePause(channel), iconSize: _iconSize + 4),
+                      const SizedBox(width: 8),
+                      FavButton(onPressed: () => favChannel(channel), isFav: channel.fav == true, isBusy: _favingChannelIds.contains(channel.channelId), iconSize: _iconSize + 4),
                     ],
                   ),
                 ),

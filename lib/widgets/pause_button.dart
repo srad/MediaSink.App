@@ -33,7 +33,7 @@ class PauseButton extends StatelessWidget {
       constraints: const BoxConstraints(),
       icon: Icon(
         isPaused ? Icons.play_circle_fill : Icons.pause_circle_filled_rounded,
-        color: isPaused ? Colors.lightGreen : Colors.amber.shade700,
+        color: isPaused ? Colors.lightGreen : Colors.lightGreen.shade600,
         size: iconSize,
       ),
       onPressed: onPressed,

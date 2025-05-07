@@ -3,6 +3,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:mediasink_app/extensions/file.dart';
 import 'package:mediasink_app/extensions/time.dart';
 import 'package:mediasink_app/models/video.dart';
+import 'package:mediasink_app/widgets/delete_button.dart';
+import 'package:mediasink_app/widgets/fav_button.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class VideoCard<T> extends StatelessWidget {
@@ -58,36 +60,50 @@ class VideoCard<T> extends StatelessWidget {
           // Play button
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            child: Row(
+            child: Column(
               children: [
-                const SizedBox(width: 4),
-                Text(video.duration.toHHMMSS()),
-                const SizedBox(width: 10),
-                Text(video.size.toGB()),
-                const SizedBox(width: 10),
-                Text('${timeago.format(video.createdAt)} ago'),
-                const Spacer(),
-                if (showDownload)
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    onPressed: () => {}, // You can implement the download action here
-                    icon: const Icon(Icons.download_rounded),
-                  ),
-                IconButton(
-                  visualDensity: VisualDensity.compact,
-                  padding: EdgeInsets.zero,
-                  onPressed: () => onBookmark(payload),
-                  icon: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    transitionBuilder: (Widget child, Animation<double> animation) {
-                      final curvedAnimation = CurvedAnimation(parent: animation, curve: Curves.elasticOut);
-                      return ScaleTransition(scale: curvedAnimation, child: child);
-                    },
-                    child: Icon(Icons.favorite_rounded, key: ValueKey<bool>(video.bookmark == true), color: video.bookmark == true ? Colors.pink : Colors.grey),
+                Padding(
+                  padding: EdgeInsetsDirectional.symmetric(vertical: 6, horizontal: 0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.timer_rounded),
+                      const SizedBox(width: 5),
+                      Text(video.duration.toHHMMSS()),
+                      const SizedBox(width: 15),
+                      Icon(Icons.sd_storage_rounded),
+                      const SizedBox(width: 5),
+                      Text(video.size.toGB()),
+                      const SizedBox(width: 15),
+                      Icon(Icons.timelapse_rounded),
+                      const SizedBox(width: 5),
+                      Text(timeago.format(video.createdAt)), //
+                    ],
                   ),
                 ),
-                IconButton(visualDensity: VisualDensity.compact, padding: EdgeInsets.zero, onPressed: () => onDelete(payload), icon: Icon(Icons.delete_rounded, color: Colors.red.shade400)),
+                Padding(
+                  padding: EdgeInsetsDirectional.symmetric(vertical: 2, horizontal: 4),
+                  child: Row(
+                    children: [
+                      if (showDownload)
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          onPressed: () => {}, // You can implement the download action here
+                          icon: const Icon(Icons.download_rounded),
+                        ),
+                      DeleteButton(onPressed: () => onDelete(payload), iconOnly: true, iconSize: 22),
+                      const Spacer(),
+                      IconButton(
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        onPressed: () => {}, // You can implement the download action here
+                        icon: const Icon(Icons.local_movies_rounded),
+                      ),
+                      FavButton(isFav: video.bookmark == true, onPressed: () => onBookmark(payload), iconSize: 22), //
+                    ],
+                  ),
+                ),
               ],
             ),
           ),

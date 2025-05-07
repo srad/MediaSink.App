@@ -9,7 +9,9 @@ import 'package:mediasink_app/screens/streams_list.dart';
 import 'package:mediasink_app/screens/startup.dart';
 import 'package:mediasink_app/screens/About.dart';
 import 'package:mediasink_app/screens/settings.dart';
+import 'package:mediasink_app/screens/videos_bookmarked.dart';
 import 'package:mediasink_app/screens/videos_filter.dart';
+import 'package:mediasink_app/screens/videos_random.dart';
 import 'package:mediasink_app/widgets/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:fvp/fvp.dart' as fvp;
@@ -70,6 +72,8 @@ class _MediaSinkApp extends State<MediaSinkApp> {
         '/channel': (context) => ChannelDetailsScreen(channelId: ModalRoute.of(context)!.settings.arguments as int, title: ModalRoute.of(context)!.settings.arguments as String),
         '/channelForm': (context) => const ChannelFormScreen(),
         '/filter': (context) => const VideosFilterScreen(),
+        '/bookmarked': (context) => const VideosBookmarkedScreen(),
+        '/random': (context) => const VideosRandomScreen(),
         // '/channel': (context) {
         //   final videoId = ModalRoute.of(context)!.settings.arguments as int;
         //   return ChannelScreen(videoId: videoId);

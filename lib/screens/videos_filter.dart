@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mediasink_app/api/export.dart';
 import 'package:mediasink_app/simple_http_client.dart';
-import 'package:mediasink_app/widgets/video_card.dart';
+import 'package:mediasink_app/widgets/video_list_builder.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/video.dart';
 
@@ -16,13 +16,12 @@ class _VideosFilterScreenState extends State<VideosFilterScreen> {
   late Future<List<Video>>? _futureVideos;
   String _sortBy = 'created_at';
   String _order = 'desc';
-  int _limit = 20;
+  int _limit = 25;
   late String? _serverUrl;
 
   @override
   void initState() {
     super.initState();
-    _loadSettings();
     _futureVideos = _fetchVideos();
   }
 
@@ -34,6 +33,7 @@ class _VideosFilterScreenState extends State<VideosFilterScreen> {
   Future<List<Video>> _fetchVideos() async {
     final client = await SimpleHttpClientFactory.create();
     final response = await client.get('/recordings/filter/$_sortBy/$_order/$_limit');
+    await _loadSettings();
 
     if (response.statusCode == 200) {
       final List<dynamic> data = response.data;
@@ -42,11 +42,14 @@ class _VideosFilterScreenState extends State<VideosFilterScreen> {
       return recordings
           .map(
             (recording) => Video(
+              bookmark: recording.bookmark == true,
+              channelName: recording.channelName,
               videoId: recording.recordingId!,
               duration: recording.duration!,
               size: recording.size!,
               createdAt: DateTime.parse(recording.createdAt!),
-              previewCover: '$_serverUrl/recordings/${recording.previewCover ?? ''}', //, //
+              previewCover: '$_serverUrl/recordings/${recording.previewCover ?? ''}',
+              url: '$_serverUrl/recordings/${recording.pathRelative ?? ''}', //
             ),
           )
           .toList();
@@ -54,38 +57,28 @@ class _VideosFilterScreenState extends State<VideosFilterScreen> {
     return [];
   }
 
+  Future<void> _refreshVideos() async {
+    final newFuture = _fetchVideos();
+    setState(() {
+      _futureVideos = newFuture;
+    });
+    await newFuture;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Video Grid")),
+      appBar: AppBar(title: const Text("Filter Videos")),
       body: Column(
         children: [
           _buildFilters(),
           Expanded(
-            child: FutureBuilder<List<Video>>(
-              future: _futureVideos,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError) {
-                  return Center(child: Text("Error: ${snapshot.error}"));
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text("No videos found"));
-                }
-
-                final videos = snapshot.data!;
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-                  itemCount: videos.length,
-                  itemBuilder: (context, index) {
-                    final video = videos[index];
-                    return VideoCard(video: video, onBookmark: (p0) => {}, onDelete: (p0) => {}, onTapVideo: () => {}, payload: video, showDownload: false);
-                  },
-                );
-              },
+            child: VideoListBuilder(
+              futureVideos: _futureVideos,
+              onRefresh: _refreshVideos, //
             ),
           ),
-        ],
+        ], //
       ),
     );
   }
@@ -99,16 +92,8 @@ class _VideosFilterScreenState extends State<VideosFilterScreen> {
             child: DropdownButtonFormField<String>(
               value: _sortBy,
               isDense: true,
-              decoration: const InputDecoration(
-                labelText: 'Sort by',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              ),
-              items: const [
-                DropdownMenuItem(value: 'created_at', child: Text('Date')),
-                DropdownMenuItem(value: 'size', child: Text('Size')),
-                DropdownMenuItem(value: 'duration', child: Text('Duration')),
-              ],
+              decoration: const InputDecoration(labelText: 'Sort by', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
+              items: const [DropdownMenuItem(value: 'created_at', child: Text('Date')), DropdownMenuItem(value: 'size', child: Text('Size')), DropdownMenuItem(value: 'duration', child: Text('Duration'))],
               onChanged: (value) {
                 if (value != null) {
                   setState(() {
@@ -124,15 +109,8 @@ class _VideosFilterScreenState extends State<VideosFilterScreen> {
             child: DropdownButtonFormField<String>(
               value: _order,
               isDense: true,
-              decoration: const InputDecoration(
-                labelText: 'Order',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              ),
-              items: const [
-                DropdownMenuItem(value: 'asc', child: Text('Asc')),
-                DropdownMenuItem(value: 'desc', child: Text('Desc')),
-              ],
+              decoration: const InputDecoration(labelText: 'Order', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
+              items: const [DropdownMenuItem(value: 'asc', child: Text('Asc')), DropdownMenuItem(value: 'desc', child: Text('Desc'))],
               onChanged: (value) {
                 if (value != null) {
                   setState(() {
@@ -148,14 +126,8 @@ class _VideosFilterScreenState extends State<VideosFilterScreen> {
             child: DropdownButtonFormField<int>(
               value: _limit,
               isDense: true,
-              decoration: const InputDecoration(
-                labelText: 'Limit',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              ),
-              items: const [10, 20, 50, 100]
-                  .map((e) => DropdownMenuItem(value: e, child: Text('$e')))
-                  .toList(),
+              decoration: const InputDecoration(labelText: 'Limit', border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8)),
+              items: const [25, 50, 100, 200, 500].map((e) => DropdownMenuItem(value: e, child: Text('$e'))).toList(),
               onChanged: (value) {
                 if (value != null) {
                   setState(() {

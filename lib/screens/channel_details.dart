@@ -11,7 +11,7 @@ import 'package:mediasink_app/widgets/confirm_dialog.dart';
 import 'package:mediasink_app/widgets/delete_button.dart';
 import 'package:mediasink_app/widgets/fav_button.dart';
 import 'package:mediasink_app/widgets/snack_utils.dart';
-import 'package:mediasink_app/widgets/pause_switch.dart';
+import 'package:mediasink_app/widgets/pause_button.dart';
 import 'package:mediasink_app/widgets/video_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timeago/timeago.dart' as timeago;
