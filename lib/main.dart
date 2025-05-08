@@ -4,7 +4,8 @@ import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:mediasink_app/screens/channel_details.dart';
 import 'package:mediasink_app/screens/channel_form.dart';
-import 'package:mediasink_app/screens/channels_list.dart';
+import 'package:mediasink_app/screens/channel_list.dart';
+import 'package:mediasink_app/screens/job_list.dart';
 import 'package:mediasink_app/screens/streams_list.dart';
 import 'package:mediasink_app/screens/startup.dart';
 import 'package:mediasink_app/screens/About.dart';
@@ -80,6 +81,7 @@ class _MediaSinkApp extends State<MediaSinkApp> {
         '/filter': (context) => const VideosFilterScreen(),
         '/bookmarked': (context) => const VideosBookmarkedScreen(),
         '/random': (context) => const VideosRandomScreen(),
+        '/jobs': (context) => const JobScreen(),
         // '/channel': (context) {
         //   final videoId = ModalRoute.of(context)!.settings.arguments as int;
         //   return ChannelScreen(videoId: videoId);

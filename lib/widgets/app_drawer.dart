@@ -59,16 +59,14 @@ class _AppDrawerState extends State<AppDrawer> {
     super.dispose();
   }
 
-  ListTile _tile(String label, String path, IconData icon) {
-    return ListTile(
-      title: Text(label),
-      leading: Icon(icon),
-      onTap: () {
-        Navigator.pop(context); // Close the drawer
-        Navigator.pushNamed(context, path);
-      },
-    );
-  }
+  ListTile _tile(String label, String path, IconData icon) => ListTile(
+    title: Text(label),
+    leading: Icon(icon),
+    onTap: () {
+      Navigator.pop(context); // Close the drawer
+      Navigator.pushNamed(context, path);
+    },
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -77,39 +75,17 @@ class _AppDrawerState extends State<AppDrawer> {
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          DrawerHeader(
-            decoration: BoxDecoration(color: color),
-            child: Row(
-              children: [
-                const Text('MediaSink App', style: TextStyle(fontSize: 28, color: Colors.white)),
-                const Spacer(),
-                SizedBox(height: 40, width: 40, child: Image.asset('assets/icon.png')),
-              ],
-            ),
-          ),
+          DrawerHeader(decoration: BoxDecoration(color: color), child: Row(children: [const Text('MediaSink App', style: TextStyle(fontSize: 28, color: Colors.white)), const Spacer(), SizedBox(height: 40, width: 40, child: Image.asset('assets/icon.png'))])),
           _tile('Streams', '/streams', Icons.videocam_rounded),
           _tile('Channels', '/channels', Icons.grid_view_rounded),
           _tile('Query Videos', '/filter', Icons.query_builder),
           _tile('Favourites', '/bookmarked', Icons.favorite_rounded),
           _tile('Random Videos', '/random', Icons.question_mark),
+          _tile('Jobs', '/jobs', Icons.add_chart_rounded),
           _tile('Settings', '/settings', Icons.settings),
           _tile('About', '/about', Icons.info),
           Divider(height: 10),
-          Padding(
-            padding: EdgeInsetsDirectional.symmetric(vertical: 20),
-            child: CircularPercentIndicator(
-              radius: 50.0,
-              lineWidth: 11.0,
-              percent: percent,
-              center: Text('${(percent * 100).toStringAsFixed(1)}%'),
-              progressColor: Theme.of(context).colorScheme.primary,
-              backgroundColor: Colors.grey[300]!,
-              footer: Padding(
-                padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
-                child: Text('Used: ${usedGB.toStringAsFixed(0)} GB / ${totalGB.toStringAsFixed(0)} GB'),
-              ),
-            ),
-          ),
+          Padding(padding: EdgeInsetsDirectional.symmetric(vertical: 20), child: CircularPercentIndicator(radius: 50.0, lineWidth: 11.0, percent: percent, center: Text('${(percent * 100).toStringAsFixed(1)}%'), progressColor: Theme.of(context).colorScheme.primary, backgroundColor: Colors.grey[300]!, footer: Padding(padding: EdgeInsets.fromLTRB(0, 10, 0, 0), child: Text('Used: ${usedGB.toStringAsFixed(0)} GB / ${totalGB.toStringAsFixed(0)} GB')))),
         ],
       ),
     );

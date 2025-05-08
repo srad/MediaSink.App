@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 
 class PauseButton extends StatelessWidget {
   final bool isPaused;
-  final bool isBusy;
+  bool isBusy;
   final VoidCallback onPressed;
   final double iconSize;
 
-  const PauseButton({
+  PauseButton({
     super.key,
     required this.isPaused,
     required this.onPressed,
