@@ -9,7 +9,7 @@ class DeleteButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final icon = Icon(Icons.delete_forever_rounded, size: iconSize, color: Colors.red.shade400);
+    final icon = Icon(Icons.delete_rounded, size: iconSize, color: Colors.red.shade400);
 
     if (iconOnly) {
       return IconButton(

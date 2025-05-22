@@ -1,4 +1,5 @@
 class Video {
+  final int? channelId;
   final int videoId;
   final num duration;
   final int size; // assuming size is in GB or any other unit you'd like
@@ -17,6 +18,7 @@ class Video {
     required this.previewCover,
     required this.url,
     required this.filename,
+    this.channelId,
     this.bookmark = false, // Default value for bookmark is false
   });
 

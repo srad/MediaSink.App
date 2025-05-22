@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:mediasink_app/api/export.dart';
+import 'package:mediasink_app/extensions/channel.dart';
 import 'package:mediasink_app/extensions/file.dart';
 import 'package:mediasink_app/rest_client_factory.dart';
 import 'package:mediasink_app/screens/channel_details.dart';
@@ -24,7 +25,7 @@ class StreamsListScreen extends StatefulWidget {
 
 class _StreamsListScreenState extends State<StreamsListScreen> with TickerProviderStateMixin {
   final ValueNotifier<List<ServicesChannelInfo>> _channelsListNotifier = ValueNotifier([]);
-  bool _isLoading = true;
+  final ValueNotifier<bool> _isLoading = ValueNotifier(false);
 
   String _search = "";
 
@@ -54,14 +55,14 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
   }
 
   Future _loadChannels() async {
-    _isLoading = true;
+    _isLoading.value = true;
     try {
       final channels = await fetchChannels();
       _channelsListNotifier.value = channels;
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showError('$e');
     } finally {
-      setState(() => _isLoading = false);
+      _isLoading.value = false;
     }
   }
 
@@ -113,30 +114,32 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
       body: ValueListenableBuilder<List<ServicesChannelInfo>>(
         valueListenable: _channelsListNotifier,
         builder: (context, channels, _) {
-          if (_isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+          return ValueListenableBuilder(valueListenable: _isLoading, builder: (context, isLoading, child) {
+            if (isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          if (channels.isEmpty) {
-            return const Center(child: Text("No channels"));
-          }
+            if (channels.isEmpty) {
+              return const Center(child: Text("No channels"));
+            }
 
-          Widget bodyContent;
-          if (_search.isNotEmpty) {
-            bodyContent = _buildChannelList(_searchResult, 'Search', key: const ValueKey('search_list'));
-          } else if (_showFavs) {
-            // Add key for AnimatedSwitcher if you wrap this later
-            bodyContent = _buildChannelList(_favourites, 'Favs', key: const ValueKey('favs_list'));
-          } else {
-            // Add key for AnimatedSwitcher if you wrap this later
-            bodyContent = TabBarView(
-              key: const ValueKey('tab_view'),
-              controller: _tabController, // Link controller
-              children: [_buildChannelList(_recordingChannels, 'Recording'), _buildChannelList(_offlineChannels, 'Offline'), _buildChannelList(_disabledChannels, 'Paused')],
-            );
-          }
+            Widget bodyContent;
+            if (_search.isNotEmpty) {
+              bodyContent = _buildChannelList(_searchResult, 'Search', key: const ValueKey('search_list'));
+            } else if (_showFavs) {
+              // Add key for AnimatedSwitcher if you wrap this later
+              bodyContent = _buildChannelList(_favourites, 'Favs', key: const ValueKey('favs_list'));
+            } else {
+              // Add key for AnimatedSwitcher if you wrap this later
+              bodyContent = TabBarView(
+                key: const ValueKey('tab_view'),
+                controller: _tabController, // Link controller
+                children: [_buildChannelList(_recordingChannels, 'Recording'), _buildChannelList(_offlineChannels, 'Offline'), _buildChannelList(_disabledChannels, 'Paused')],
+              );
+            }
 
-          return AnimatedSwitcher(duration: const Duration(milliseconds: 300), child: bodyContent);
+            return AnimatedSwitcher(duration: const Duration(milliseconds: 300), child: bodyContent);
+          });
         },
       ),
     );
@@ -155,9 +158,16 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
     return RefreshIndicator(
       key: key,
       onRefresh: _refresh,
-      child: ListView.builder(
-        key: PageStorageKey(label), // Use label to preserve scroll position
+      child: GridView.builder(
+        padding: EdgeInsets.zero,
         itemCount: channels.length,
+        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 450,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          childAspectRatio: 1.17, // 👈 tweak this until items look right
+        ),
+        key: PageStorageKey(label), // Use label to preserve scroll position
         itemBuilder: (context, index) {
           final channel = channels[index];
           return _video(channel, label);
@@ -307,7 +317,7 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
       height: 180,
       width: double.infinity,
       fit: BoxFit.cover,
-      imageUrl: preview != null && preview!.isNotEmpty ? 'http://192.168.0.219:4000/${preview!}' : '',
+      imageUrl: preview != null && preview!.isNotEmpty ? 'http://192.168.0.219:3000/recordings/${preview!}' : '',
       placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
       errorWidget: (context, url, error) => Container(height: 180, color: Colors.grey[300], child: const Center(child: Icon(Icons.broken_image, size: 40))), //
     );
@@ -358,12 +368,12 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
         await api.channels.postChannelsIdPause(id: id);
       }
 
-      setState(() {
-        final index = _channelsListNotifier.value.indexWhere((c) => c.channelId == id);
-        if (index != -1) {
-          _channelsListNotifier.value[index].isPaused = !channel.isPaused!;
-        }
-      });
+      final index = _channelsListNotifier.value.indexWhere((c) => c.channelId == id);
+      if (index != -1) {
+        final List<ServicesChannelInfo> newList = List.from(_channelsListNotifier.value);
+        newList[index] = channel.copyWith(isPaused: !channel.isPaused!);
+        _channelsListNotifier.value = newList;
+      }
       if (mounted) messenger.showOk('Channel state updated');
     } catch (e) {
       if (mounted) messenger.showError('Failed to update channel: $e');
@@ -389,13 +399,12 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
       } else {
         await client.channels.patchChannelsIdFav(id: id);
       }
-      // Original state update
-      setState(() {
-        final index = _channelsListNotifier.value.indexWhere((c) => c.channelId == id);
-        if (index != -1) {
-          _channelsListNotifier.value[index].fav = !currentFavStatus;
-        }
-      });
+      final index = _channelsListNotifier.value.indexWhere((c) => c.channelId == id);
+      if (index != -1) {
+        final List<ServicesChannelInfo> newList = List.from(_channelsListNotifier.value);
+        newList[index] = channel.copyWith(fav: !currentFavStatus);
+        _channelsListNotifier.value = newList;
+      }
       if (mounted) messenger.showOk('Saved');
     } catch (e) {
       if (mounted) messenger.showError('Error updating favourite: $e');

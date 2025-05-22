@@ -15,19 +15,23 @@ class VideoCard<T> extends StatelessWidget {
   final Video video;
   final Function(T)? onBookmarked;
   final Function(T)? onDeleted;
+  final Function(T)? onParent;
   final Function(T, String)? onError;
   final VoidCallback onTapVideo;
   final T payload;
   final bool showDownload;
+  final bool showChannelLink;
 
   const VideoCard({
     super.key,
     required this.video,
     this.onBookmarked,
     this.onDeleted,
+    this.onParent,
     required this.onTapVideo,
     required this.payload,
     this.onError,
+    this.showChannelLink = false,
     this.showDownload = true, //
   });
 
@@ -112,7 +116,22 @@ class VideoCard<T> extends StatelessWidget {
                           icon: const Icon(Icons.download_rounded),
                           iconSize: _iconSize,
                         ),
-                      DeleteButton(onPressed: () => _deleteVideo(context, video, payload), iconOnly: true, iconSize: _iconSize),
+                      DeleteButton(
+                          onPressed: () => _deleteVideo(context, video, payload),
+                          iconOnly: true,
+                          iconSize: _iconSize,//
+                      ),
+                      if (showChannelLink)
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          onPressed: () {
+                            if (onParent != null) onParent!(payload);
+                          },
+                          // You can implement the download action here
+                          icon: const Icon(Icons.grid_view_rounded),
+                          iconSize: _iconSize,//
+                        ),
                       const Spacer(),
                       IconButton(
                         visualDensity: VisualDensity.compact,
