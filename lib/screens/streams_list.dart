@@ -40,7 +40,7 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
 
   bool _showFavs = false;
   final Set<int> _loadingChannelIds = {};
-  final Set<int> _favingChannelIds = {};
+  final Set<int> _favChannels = {};
   final double _iconSize = 28;
 
   late TabController _tabController;
@@ -271,7 +271,7 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
                       ),
                       PauseButton(isPaused: channel.isPaused == true, onPressed: () => togglePause(channel), iconSize: _iconSize + 4),
                       const SizedBox(width: 8),
-                      FavButton(onPressed: () => favChannel(channel), isFav: channel.fav == true, isBusy: _favingChannelIds.contains(channel.channelId), iconSize: _iconSize + 4),
+                      FavButton(onPressed: () => favChannel(channel), isFav: channel.fav == true, isBusy: _favChannels.contains(channel.channelId), iconSize: _iconSize + 4),
                     ],
                   ),
                 ),
@@ -379,7 +379,7 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
   Future<void> favChannel(final ServicesChannelInfo channel) async {
     final messenger = ScaffoldMessenger.of(context);
     try {
-      setState(() => _favingChannelIds.add(channel.channelId!));
+      setState(() => _favChannels.add(channel.channelId!));
       final int id = channel.channelId!;
       final bool currentFavStatus = channel.fav!;
       final client = await RestClientFactory.create();
@@ -400,7 +400,7 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
     } catch (e) {
       if (mounted) messenger.showError('Error updating favourite: $e');
     } finally {
-      setState(() => _favingChannelIds.remove(channel.channelId!));
+      setState(() => _favChannels.remove(channel.channelId!));
     }
   }
 

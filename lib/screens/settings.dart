@@ -1,5 +1,8 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:mediasink_app/api/export.dart';
+import 'package:mediasink_app/rest_client_factory.dart';
 import 'package:mediasink_app/utils/permission_utils.dart';
 import 'package:mediasink_app/utils/utils.dart';
 import 'package:mediasink_app/widgets/app_drawer.dart';
@@ -69,9 +72,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _serverState = exists ? ServerState.valid : ServerState.invalid;
       });
 
-      final snackBar = SnackBar(content: Text(_serverState == ServerState.valid ? 'Server is reachable, saved ✅' : 'Server is unreachable, not saved ❌'));
-      ScaffoldMessenger.of(context).showSnackBar(snackBar);
       if (_serverState != ServerState.valid) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Server is unreachable, not saved ❌')));
         return;
       }
 
@@ -79,11 +81,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await prefs.setString('serverUrl', _serverUrlController.text.trim());
       await prefs.setBool('darkMode', _darkMode);
 
-      await _secureStorage.write(key: 'server_username', value: _usernameController.text.trim());
-      await _secureStorage.write(key: 'server_password', value: _passwordController.text);
 
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings saved')));
-      _saved = true;
+      try {
+        // Save settings and try a login request:
+        final auth = RequestsAuthenticationRequest(username: _usernameController.text.trim(), password: _passwordController.text);
+        final client = await RestClientFactory.create(auth: auth);
+        await client.auth.postAuthLogin(authenticationRequest: auth);
+
+        await _secureStorage.write(key: 'server_username', value: _usernameController.text.trim());
+        await _secureStorage.write(key: 'server_password', value: _passwordController.text);
+
+        setState(() { _saved = true; });
+
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings saved ✅')));
+      } on DioException catch (dioError) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Invalid connection data, is the server IP, port and credentials correct? ❌')));
+      } catch(e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Credentils invalid ❌')));
+      } finally {
+        setState(() {
+          _isSaving = false;
+        });
+      }
     } catch (e) {
       final snackBar = SnackBar(content: Text(e.toString()));
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(snackBar);

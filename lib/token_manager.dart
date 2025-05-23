@@ -14,11 +14,17 @@ class TokenManager {
 
   TokenManager._internal();
 
-  Future<String?> getToken() async {
+  Future<String?> getToken({RequestsAuthenticationRequest? auth}) async {
     if (_accessToken != null) return _accessToken;
 
-    final username = await _secureStorage.read(key: 'server_username');
-    final password = await _secureStorage.read(key: 'server_password');
+    String? username, password;
+    if (auth == null) {
+      username = await _secureStorage.read(key: 'server_username');
+      password = await _secureStorage.read(key: 'server_password');
+    } else {
+      username = auth.username;
+      password = auth.password;
+    }
 
     if (username == null || password == null) {
       throw Exception('Credentials missing');
