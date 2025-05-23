@@ -126,15 +126,9 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
             ],
           ),
         )
-        : GridView.builder(
-          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-            maxCrossAxisExtent: 400,
-            mainAxisSpacing: 0,
-            crossAxisSpacing: 0,
-            childAspectRatio: 3 / 2.38, //
-          ),
-          itemCount: _channel!.recordings?.length,
+        : ListView.separated(
+          separatorBuilder: (context, index) => Divider(color: Colors.transparent, height: 0),
+          itemCount: (_channel!.recordings??[]).length,
           itemBuilder: (context, index) {
             if (_channel == null || _channel?.recordings == null) return SizedBox.shrink();
             final channel = _channel!;

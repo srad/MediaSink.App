@@ -41,15 +41,10 @@ class VideoListBuilder extends StatelessWidget {
 
         return RefreshIndicator(
           onRefresh: () async => onRefresh(),
-          child: GridView.builder(
+          child: ListView.separated(
             padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
             itemCount: videos.length,
-            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 400,
-              mainAxisSpacing: 0,
-              crossAxisSpacing: 0,
-              childAspectRatio: 3 / 2.37,//
-            ),
+            separatorBuilder: (context, index) => Divider(color: Colors.transparent, height: 0),
             itemBuilder: (context, index) {
               final video = videos[index];
               return VideoCard(

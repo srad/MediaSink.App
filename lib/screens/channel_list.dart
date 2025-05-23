@@ -76,10 +76,10 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
               padding: EdgeInsets.all(8),
               itemCount: channels.length,
               gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 350,
-                  mainAxisSpacing: 8,
-                  crossAxisSpacing: 8,
-                  childAspectRatio: 16 / 9
+                  maxCrossAxisExtent: 300,
+                  mainAxisSpacing: 4,
+                  crossAxisSpacing: 4,
+                childAspectRatio: 3/2,//
               ),
               itemBuilder: (context, index) {
                 final channel = channels[index];
@@ -94,12 +94,10 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
                           child: CachedNetworkImage(
                             placeholder:
                                 (context, url) => const SizedBox(
-                                  height: 180,
                                   child: Center(child: CircularProgressIndicator()), //
                                 ),
                             errorWidget:
                                 (context, url, error) => Container(
-                                  height: 180,
                                   color: Colors.grey[300],
                                   child: const Center(child: Icon(Icons.broken_image, size: 40)), //
                                 ),
@@ -110,7 +108,7 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
                       ),
 
                       // Gradient overlay
-                      Positioned.fill(child: Container(decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), gradient: LinearGradient(colors: [Colors.black.withOpacity(0.6), Colors.transparent], begin: Alignment.bottomCenter, end: Alignment.topCenter)))),
+                      Positioned.fill(child: Container(decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), gradient: LinearGradient(colors: [Colors.black.withValues(alpha: 0.6), Colors.transparent], begin: Alignment.bottomCenter, end: Alignment.topCenter)))),
 
                       // Channel info overlay
                       Positioned(

@@ -40,7 +40,7 @@ class VideoCard<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.all(6.0),
+      margin: EdgeInsets.all(0),
       elevation: 4,
       child: Column(
         children: [
@@ -54,12 +54,10 @@ class VideoCard<T> extends StatelessWidget {
                   child: CachedNetworkImage(
                     imageUrl: video.previewCover,
                     fit: BoxFit.cover,
-                    height: 180,
                     width: double.infinity,
-                    placeholder: (context, url) => const SizedBox(height: 180, child: Center(child: CircularProgressIndicator())),
+                    placeholder: (context, url) => const SizedBox(child: Center(child: CircularProgressIndicator())),
                     errorWidget:
                         (context, url, error) => Container(
-                          height: 180,
                           color: Colors.grey[300],
                           child: const Center(child: Icon(Icons.broken_image, size: 40)), //
                         ),

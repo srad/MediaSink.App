@@ -14,7 +14,61 @@ import 'package:mediasink_app/widgets/fav_button.dart';
 import 'package:mediasink_app/widgets/pause_button.dart';
 import 'package:mediasink_app/widgets/snack_utils.dart';
 import 'package:mediasink_app/widgets/recording_indicator.dart';
-import 'package:url_launcher/url_launcher.dart';
+
+double calculateChildAspectRatio({
+  required BuildContext context,
+  required double maxCrossAxisExtent,
+  required double crossAxisSpacing,
+  required double desiredItemHeight,
+}) {
+  final double screenWidth = MediaQuery.of(context).size.width;
+
+  if (screenWidth <= 0 || desiredItemHeight <= 0 || maxCrossAxisExtent <= 0) {
+    return 1.0; // Default or error case
+  }
+
+  // Estimate the number of columns the delegate would choose
+  // The delegate tries to fit as many columns as possible where each item's
+  // width is at most maxCrossAxisExtent.
+  int numColumns = 1;
+  double calculatedItemWidth = screenWidth; // Start with 1 column
+
+  // Iterate to find the optimal number of columns and the resulting item width
+  // Start with a reasonable max guess for columns, e.g. screenWidth / (a small width like 100)
+  // Or iterate downwards from a max practical number of columns (e.g., 10)
+  for (int n = (screenWidth / (maxCrossAxisExtent * 0.5)).ceil() + 2; n >= 1; n--) { // Iterate downwards
+    // Calculate width if 'n' columns were used
+    final double potentialItemWidth = (screenWidth - (n - 1) * crossAxisSpacing) / n;
+    if (potentialItemWidth <= 0) continue; // Not possible
+
+    // If this width is less than or equal to maxCrossAxisExtent,
+    // this is a candidate configuration. The delegate picks the one
+    // that maximizes 'n' while satisfying this.
+    if (potentialItemWidth <= maxCrossAxisExtent) {
+      numColumns = n;
+      calculatedItemWidth = potentialItemWidth;
+      break; // Found the number of columns the delegate would likely choose
+    }
+  }
+
+  // If after the loop, we are still at the initial state (e.g., screen too narrow for any reasonable mCE)
+  // or if calculatedItemWidth is still very large, it means we'll likely have 1 column.
+  if (numColumns == 1 && calculatedItemWidth > maxCrossAxisExtent) {
+    // If one column would be wider than mCE, the delegate would cap it at mCE
+    // (This scenario is a bit tricky as the delegate also tries to fill space)
+    // For simplicity, let's assume if 1 column, it takes screenWidth unless mCE is smaller
+    calculatedItemWidth = (screenWidth < maxCrossAxisExtent) ? screenWidth : maxCrossAxisExtent;
+  }
+
+
+  // Now calculate the aspect ratio
+  final double childAspectRatio = calculatedItemWidth / desiredItemHeight;
+
+  // print('ScreenW: $screenWidth, mCE: $maxCrossAxisExtent, cS: $crossAxisSpacing, dH: $desiredItemHeight');
+  // print('NumCols: $numColumns, ItemW: $calculatedItemWidth, cAR: $childAspectRatio');
+
+  return childAspectRatio > 0 ? childAspectRatio : 1.0; // Ensure positive
+}
 
 class StreamsListScreen extends StatefulWidget {
   const StreamsListScreen({super.key});
@@ -161,15 +215,10 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
     return RefreshIndicator(
       key: key,
       onRefresh: _refresh,
-      child: GridView.builder(
+      child: ListView.separated(
+        separatorBuilder: (context, index) => Divider(color: Colors.transparent, height: 10),
         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
         itemCount: channels.length,
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 400,
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
-          childAspectRatio: 3 / 2.81,//
-        ),
         key: PageStorageKey(label),
         itemBuilder: (context, index) {
           final channel = channels[index];
@@ -181,92 +230,34 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
 
   Widget _video(ServicesChannelInfo channel, String label) {
     return Card(
+      margin: EdgeInsets.all(0),
       elevation: 4,
       child: Column(
-        mainAxisSize: MainAxisSize.min, // 🔑 Ensure the column wraps content
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
-            child: GestureDetector(
-              child: AnimatedBuilder(
-                animation: _tabController.animation!,
-                builder: (context, child) {
-                  final tabIndex = _tabController.animation!.value.round();
-
-                  return _buildPreviewOverlay(channel, tabIndex);
-                },
-              ),
-              onTap: () {
-                if (channel.channelId != null && channel.channelName != null) {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => ChannelDetailsScreen(channelId: channel.channelId!, title: channel.channelName!)));
-                }
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+          _buildPreview(channel),
+          Container(
+            padding: EdgeInsets.all(0),
+            margin: EdgeInsetsDirectional.symmetric(vertical: 8, horizontal: 12),
             child: Column(
-              mainAxisSize: MainAxisSize.min, // 🔑 Ensure the column wraps content
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Row(
-                      children: [
-                        Text(channel.displayName ?? "No display name", style: TextStyle(fontSize: 20, color: Theme.of(context).colorScheme.primary), overflow: TextOverflow.ellipsis),
-                        const SizedBox(width: 4), // Small space before icon
-                        const Icon(Icons.link), //
-                      ],
-                )),
-                    SizedBox(
-                      height: 36, // ⬅️ Set a fixed height for horizontal scrolling
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: (channel.tags == null || channel.tags!.isEmpty) // Show placeholder if null or empty
-                              ? [ElevatedButton(onPressed: null, style: ElevatedButton.styleFrom(visualDensity: VisualDensity.compact), child: const Text('No tags'))]
-                              : channel.tags!
-                              .map(
-                                (tag) => Padding(
-                              padding: const EdgeInsets.only(right: 8.0),
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  visualDensity: VisualDensity.compact,
-                                ),
-                                onPressed: () {},
-                                child: Text(tag),
-                              ),
-                            ),
-                          )
-                              .toList(),
-                        ),
-                      ),
-                    ),
-                Divider(color: Colors.grey.shade300),
-                Row(
-                  children: [
-                    Icon(Icons.sd_storage_rounded, color: Theme.of(context).primaryColor, size: _iconSize), //
-                    const SizedBox(width: 5),
-                    Text(channel.recordingsSize?.toGB() ?? '0 GB', style: const TextStyle(fontSize: 14)),
-                    const SizedBox(width: 10),
-                    Icon(Icons.videocam_rounded, color: Theme.of(context).primaryColor, size: _iconSize),
-                    const SizedBox(width: 5),
-                    Text(channel.recordingsCount?.toString() ?? '0', style: const TextStyle(fontSize: 14)),
-                    const Spacer(),
-                    DeleteButton(onPressed: () => deleteChannel(channel), iconSize: _iconSize, iconOnly: true),
-                    IconButton(
-                      padding: EdgeInsets.symmetric(horizontal: 10),
-                      visualDensity: VisualDensity.compact,
-                      constraints: const BoxConstraints(),
-                      // Removes default min size
-                      iconSize: _iconSize,
-                      onPressed: () => editChannel(channel),
-                      //
-                      icon: const Icon(Icons.edit_rounded),
-                    ),
-                    PauseButton(isPaused: channel.isPaused == true, onPressed: () => togglePause(channel), iconSize: _iconSize + 4),
-                    FavButton(onPressed: () => favChannel(channel), isFav: channel.fav == true, isBusy: _favChannels.contains(channel.channelId), iconSize: _iconSize + 4),
-                  ],
+                Container(
+                  margin: EdgeInsetsDirectional.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      Text(channel.displayName ?? "No display name", style: TextStyle(fontSize: 20, color: Theme.of(context).colorScheme.primary), overflow: TextOverflow.ellipsis),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.link), //
+                    ],
+                  ),
                 ),
+                Container(margin: EdgeInsetsDirectional.symmetric(vertical: 4), child: _buildTags(channel)),
+                Container(child: _buildControls(channel)),
               ],
             ),
           ),
@@ -469,6 +460,81 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
             ],
           );
         },
+      ),
+    );
+  }
+
+  _buildPreview(ServicesChannelInfo channel) {
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
+      child: GestureDetector(
+        child: AnimatedBuilder(
+          animation: _tabController.animation!,
+          builder: (context, child) {
+            final tabIndex = _tabController.animation!.value.round();
+            return _buildPreviewOverlay(channel, tabIndex);
+          },
+        ),
+        onTap: () {
+          if (channel.channelId != null && channel.channelName != null) {
+            Navigator.push(context, MaterialPageRoute(builder: (context) => ChannelDetailsScreen(channelId: channel.channelId!, title: channel.channelName!)));
+          }
+        },
+      ),
+    );
+  }
+
+  _buildControls(ServicesChannelInfo channel) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.sd_storage_rounded, color: Theme.of(context).primaryColor, size: _iconSize), //
+        const SizedBox(width: 5),
+        Text(channel.recordingsSize?.toGB() ?? '0 GB', style: const TextStyle(fontSize: 14)),
+        const SizedBox(width: 10),
+        Icon(Icons.videocam_rounded, color: Theme.of(context).primaryColor, size: _iconSize + 6),
+        const SizedBox(width: 5),
+        Text(channel.recordingsCount?.toString() ?? '0', style: const TextStyle(fontSize: 14)),
+        const Spacer(),
+        DeleteButton(onPressed: () => deleteChannel(channel), iconSize: _iconSize, iconOnly: true),
+        IconButton(
+          padding: EdgeInsets.symmetric(horizontal: 10),
+          visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints(),
+          // Removes default min size
+          iconSize: _iconSize,
+          onPressed: () => editChannel(channel),
+          //
+          icon: const Icon(Icons.edit_rounded),
+        ),
+        PauseButton(isPaused: channel.isPaused == true, onPressed: () => togglePause(channel), iconSize: _iconSize + 4),
+        FavButton(onPressed: () => favChannel(channel), isFav: channel.fav == true, isBusy: _favChannels.contains(channel.channelId), iconSize: _iconSize + 4),
+      ],
+    );
+  }
+
+  _buildTags(ServicesChannelInfo channel) {
+    return SizedBox(
+      height: 36, // ⬅️ Set a fixed height for horizontal scrolling
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal, //
+        child: Row(
+          children:
+              (channel.tags == null || channel.tags!.isEmpty) // Show placeholder if null or empty
+                  ? [ElevatedButton(onPressed: null, style: ElevatedButton.styleFrom(visualDensity: VisualDensity.compact), child: const Text('No tags'))]
+                  : channel.tags!
+                      .map(
+                        (tag) => Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(visualDensity: VisualDensity.compact),
+                            onPressed: () {},
+                            child: Text(tag), //
+                          ),
+                        ),
+                      )
+                      .toList(),
+        ),
       ),
     );
   }
