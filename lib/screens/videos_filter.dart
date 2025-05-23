@@ -55,6 +55,7 @@ class _VideosFilterScreenState extends State<VideosFilterScreen> {
       return recordings
           .map(
             (recording) => Video(
+              channelId: recording.channelId,
               bookmark: recording.bookmark == true,
               videoId: recording.recordingId!,
               url: '$_serverUrl/recordings/${recording.pathRelative}',

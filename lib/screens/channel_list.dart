@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mediasink_app/api/export.dart';
 import 'package:mediasink_app/rest_client_factory.dart';
 import 'package:mediasink_app/screens/channel_details.dart';
@@ -74,7 +75,12 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
             child: GridView.builder(
               padding: EdgeInsets.all(8),
               itemCount: channels.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: 16 / 9),
+              gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 350,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  childAspectRatio: 16 / 9
+              ),
               itemBuilder: (context, index) {
                 final channel = channels[index];
                 return GestureDetector(

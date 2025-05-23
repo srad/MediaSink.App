@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
@@ -19,7 +20,11 @@ import 'package:fvp/fvp.dart' as fvp;
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
-  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
+  ]);
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   fvp.registerWith(
     options: {
@@ -32,6 +37,7 @@ void main() async {
       ignoreSsl: true // option: set to false to disable working with http links (default: false)
   );
 
+  //debugPaintSizeEnabled = false;
   runApp(ChangeNotifierProvider(create: (_) => ThemeProvider(), child: MediaSinkApp()));
   // FlutterNativeSplash.remove();
 }

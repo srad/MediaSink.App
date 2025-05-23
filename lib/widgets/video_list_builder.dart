@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mediasink_app/models/video.dart';
+import 'package:mediasink_app/screens/channel_details.dart';
 import 'package:mediasink_app/screens/video_player.dart';
 import 'video_card.dart';
 
@@ -40,16 +41,29 @@ class VideoListBuilder extends StatelessWidget {
 
         return RefreshIndicator(
           onRefresh: () async => onRefresh(),
-          child: ListView.builder(
+          child: GridView.builder(
+            padding: EdgeInsets.zero,
             itemCount: videos.length,
+            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 450,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 1.46, // 👈 tweak this until items look right
+            ),
             itemBuilder: (context, index) {
               final video = videos[index];
               return VideoCard(
                 key: key,
                 video: video,
+                showChannelLink: true,
                 onBookmarked: _toggleBookmark,
                 onDeleted: _deleteVideo,
                 onError: onError,
+                onParent: (p0) {
+                  if (p0.channelId != null) {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => ChannelDetailsScreen(channelId: p0.channelId!, title: "Channel Videos")));
+                  }
+                },
                 onTapVideo: () {
                   if (onTapVideo != null) {
                     onTapVideo!(video);

@@ -1,9 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:mediasink_app/api/export.dart';
+import 'package:mediasink_app/extensions/channel.dart';
 import 'package:mediasink_app/extensions/file.dart';
 import 'package:mediasink_app/extensions/recording.dart';
-import 'package:mediasink_app/extensions/time.dart';
 import 'package:mediasink_app/models/video.dart';
 import 'package:mediasink_app/rest_client_factory.dart';
 import 'package:mediasink_app/screens/video_player.dart';
@@ -103,7 +103,7 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
         await client.channels.patchChannelsIdFav(id: id);
       }
       setState(() {
-        _channel!.fav = !currentFavStatus;
+        _channel = _channel!.copyWith(fav: !currentFavStatus);
       });
       if (mounted) messenger.showOk('Saved');
     } catch (e) {
@@ -126,11 +126,13 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
             ],
           ),
         )
-        : ListView(
-          children: [
-            ListView.builder(
-              shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
+        : GridView.builder(
+    gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+      maxCrossAxisExtent: 450,
+      mainAxisSpacing: 8,
+      crossAxisSpacing: 8,
+      childAspectRatio: 1.46, // 👈 tweak this until items look right
+    ),
               itemCount: _channel!.recordings?.length,
               itemBuilder: (context, index) {
                 if (_channel == null || _channel?.recordings == null) return SizedBox.shrink();
@@ -158,9 +160,7 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
                   onTapVideo: () => Navigator.push(context, MaterialPageRoute(builder: (context) => VideoPlayerScreen(title: _channel!.channelName!, videoUrl: '$_serverUrl/recordings/${recording.pathRelative}'))), //
                 );
               },
-            ),
-          ],
-        );
+            );
   }
 
   Future<void> _togglePause() async {
@@ -172,16 +172,17 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
       content: Text('Do you want to ${channel.isPaused == true ? 'resume' : 'pause'} stream recording for this channel?'),
       onConfirm: () async {
         Navigator.pop(context, 'OK'); // Close dialog first
-        await _togglePauseExecute(channel); // Then execute async action
+        await _togglePauseExecute(); // Then execute async action
       },
     );
   }
 
-  Future<void> _togglePauseExecute(final ServicesChannelInfo channel) async {
+  Future<void> _togglePauseExecute() async {
     final messenger = ScaffoldMessenger.of(context);
 
-    final int id = channel.channelId!;
     try {
+      final channel = _channel!;
+      final int id = channel.channelId!;
       final api = await RestClientFactory.create();
 
       setState(() {
@@ -195,7 +196,7 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
       }
 
       setState(() {
-        channel.isPaused = !channel.isPaused!;
+        _channel = channel.copyWith(isPaused: channel.isPaused);
       });
       if (mounted) messenger.showOk('Channel state updated');
     } catch (e) {
