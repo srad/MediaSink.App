@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mediasink_app/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ThemeProvider extends ChangeNotifier {
@@ -10,9 +11,22 @@ class ThemeProvider extends ChangeNotifier {
 
   ThemeMode get themeMode => _themeMode;
 
+  final lightTheme = ThemeData(
+    brightness: Brightness.light,
+    primaryColor: '#322448'.toColor(), //
+    appBarTheme: AppBarTheme(backgroundColor: '#322448'.toColor(), foregroundColor: Colors.white),
+    bottomAppBarTheme: BottomAppBarTheme(
+      color: Colors.grey.shade200, // Light mode BottomAppBar color
+    ),
+  );
+  final darkTheme = ThemeData(
+    brightness: Brightness.dark,
+    primaryColor: '#322448'.toColor(), //
+    appBarTheme: AppBarTheme(backgroundColor: '#322448'.toColor(), foregroundColor: Colors.white),
+  );
+
   void toggleTheme() {
-    _themeMode =
-    _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+    _themeMode = _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
     _saveTheme(); // Save preference
     notifyListeners();
   }

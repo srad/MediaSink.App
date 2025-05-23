@@ -21,6 +21,7 @@ class VideoCard<T> extends StatelessWidget {
   final T payload;
   final bool showDownload;
   final bool showChannelLink;
+  final double iconSize;
 
   const VideoCard({
     super.key,
@@ -32,10 +33,9 @@ class VideoCard<T> extends StatelessWidget {
     required this.payload,
     this.onError,
     this.showChannelLink = false,
-    this.showDownload = true, //
+    this.showDownload = true,
+    this.iconSize = 22, //
   });
-
-  final double _iconSize = 26;
 
   @override
   Widget build(BuildContext context) {
@@ -78,17 +78,17 @@ class VideoCard<T> extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.timer_rounded),
+                      Icon(Icons.timer_rounded, size: iconSize),
                       const SizedBox(width: 5),
                       Text(video.duration.toHHMMSS()),
                       const SizedBox(width: 15),
-                      Icon(Icons.sd_storage_rounded),
+                      Icon(Icons.sd_storage_rounded, size: iconSize),
                       const SizedBox(width: 5),
                       Text(video.size.toGB()),
                       const SizedBox(width: 15),
-                      Icon(Icons.timelapse_rounded),
+                      Icon(Icons.timelapse_rounded, size: iconSize),
                       const SizedBox(width: 5),
-                      Text(timeago.format(video.createdAt)), //
+                      Text(timeago.format(video.createdAt, locale: 'en_short')), //
                     ],
                   ),
                 ),
@@ -114,12 +114,12 @@ class VideoCard<T> extends StatelessWidget {
                             }
                           },
                           icon: const Icon(Icons.download_rounded),
-                          iconSize: _iconSize,
+                          iconSize: iconSize,
                         ),
                       DeleteButton(
                           onPressed: () => _deleteVideo(context, video, payload),
                           iconOnly: true,
-                          iconSize: _iconSize,//
+                          iconSize: iconSize + 2,//
                       ),
                       if (showChannelLink)
                         IconButton(
@@ -130,7 +130,7 @@ class VideoCard<T> extends StatelessWidget {
                           },
                           // You can implement the download action here
                           icon: const Icon(Icons.grid_view_rounded),
-                          iconSize: _iconSize,//
+                          iconSize: iconSize + 2,//
                         ),
                       const Spacer(),
                       IconButton(
@@ -139,9 +139,9 @@ class VideoCard<T> extends StatelessWidget {
                         onPressed: () => {},
                         // You can implement the download action here
                         icon: const Icon(Icons.local_movies_rounded),
-                        iconSize: _iconSize,
+                        iconSize: iconSize + 2,
                       ),
-                      FavButton(isFav: video.bookmark == true, onPressed: () => _bookmarkVideo(context, video, payload), iconSize: _iconSize), //
+                      FavButton(isFav: video.bookmark == true, onPressed: () => _bookmarkVideo(context, video, payload), iconSize: iconSize + 2), //
                     ],
                   ),
                 ),

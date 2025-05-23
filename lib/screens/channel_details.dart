@@ -59,7 +59,7 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
       bottomNavigationBar:
           (_channel != null)
               ? BottomAppBar(
-                height: 70,
+                height: 55,
                 child: Row(
                   children: [
                     Icon(Icons.sd_storage_rounded, color: Theme.of(context).primaryColor, size: 22), //
@@ -70,9 +70,9 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
                     const SizedBox(width: 5),
                     Text('${_channel!.recordings?.length ?? 0}', style: const TextStyle(fontSize: 14)),
                     Spacer(),
-                    DeleteButton(onPressed: deleteChannel, iconOnly: true, iconSize: 30),
-                    PauseButton(isPaused: _channel?.isPaused == true, onPressed: () => _togglePause(), isBusy: _isPausing, iconSize: 30),
-                    FavButton(onPressed: favChannel, isBusy: _isFaving, isFav: _channel!.fav!, iconSize: 30),
+                    DeleteButton(onPressed: deleteChannel, iconOnly: true, iconSize: 28),
+                    PauseButton(isPaused: _channel?.isPaused == true, onPressed: () => _togglePause(), isBusy: _isPausing, iconSize: 28),
+                    FavButton(onPressed: favChannel, isBusy: _isFaving, isFav: _channel!.fav!, iconSize: 28),
                   ], //
                 ),
               )
@@ -127,40 +127,41 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
           ),
         )
         : GridView.builder(
-    gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-      maxCrossAxisExtent: 450,
-      mainAxisSpacing: 8,
-      crossAxisSpacing: 8,
-      childAspectRatio: 1.46, // 👈 tweak this until items look right
-    ),
-              itemCount: _channel!.recordings?.length,
-              itemBuilder: (context, index) {
-                if (_channel == null || _channel?.recordings == null) return SizedBox.shrink();
-                final channel = _channel!;
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 400,
+            mainAxisSpacing: 0,
+            crossAxisSpacing: 0,
+            childAspectRatio: 3 / 2.38, //
+          ),
+          itemCount: _channel!.recordings?.length,
+          itemBuilder: (context, index) {
+            if (_channel == null || _channel?.recordings == null) return SizedBox.shrink();
+            final channel = _channel!;
 
-                final item = channel.recordings?[index];
-                if (item == null) return SizedBox.shrink();
-                final recording = item!;
+            final item = channel.recordings?[index];
+            if (item == null) return SizedBox.shrink();
+            final recording = item!;
 
-                return VideoCard(
-                  payload: recording,
-                  video: Video(
-                    videoId: recording.recordingId!,
-                    filename: recording.filename,
-                    url: '$_serverUrl/recordings/${recording.pathRelative}',
-                    duration: recording.duration!,
-                    size: recording.size!,
-                    bookmark: recording.bookmark!,
-                    createdAt: DateTime.tryParse(recording.createdAt!) ?? DateTime.now(),
-                    previewCover: '$_serverUrl/recordings/${recording.previewCover ?? channel.preview}', //
-                  ),
-                  onBookmarked: _videoBookmarked,
-                  onDeleted: _videoDeleted,
-                  onError: _errorDelete,
-                  onTapVideo: () => Navigator.push(context, MaterialPageRoute(builder: (context) => VideoPlayerScreen(title: _channel!.channelName!, videoUrl: '$_serverUrl/recordings/${recording.pathRelative}'))), //
-                );
-              },
+            return VideoCard(
+              payload: recording,
+              video: Video(
+                videoId: recording.recordingId!,
+                filename: recording.filename,
+                url: '$_serverUrl/recordings/${recording.pathRelative}',
+                duration: recording.duration!,
+                size: recording.size!,
+                bookmark: recording.bookmark!,
+                createdAt: DateTime.tryParse(recording.createdAt!) ?? DateTime.now(),
+                previewCover: '$_serverUrl/recordings/${recording.previewCover ?? channel.preview}', //
+              ),
+              onBookmarked: _videoBookmarked,
+              onDeleted: _videoDeleted,
+              onError: _errorDelete,
+              onTapVideo: () => Navigator.push(context, MaterialPageRoute(builder: (context) => VideoPlayerScreen(title: _channel!.channelName!, videoUrl: '$_serverUrl/recordings/${recording.pathRelative}'))), //
             );
+          },
+        );
   }
 
   Future<void> _togglePause() async {

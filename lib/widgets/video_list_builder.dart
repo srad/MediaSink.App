@@ -42,13 +42,13 @@ class VideoListBuilder extends StatelessWidget {
         return RefreshIndicator(
           onRefresh: () async => onRefresh(),
           child: GridView.builder(
-            padding: EdgeInsets.zero,
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
             itemCount: videos.length,
-            gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-              maxCrossAxisExtent: 450,
-              mainAxisSpacing: 8,
-              crossAxisSpacing: 8,
-              childAspectRatio: 1.46, // 👈 tweak this until items look right
+            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+              maxCrossAxisExtent: 400,
+              mainAxisSpacing: 0,
+              crossAxisSpacing: 0,
+              childAspectRatio: 3 / 2.37,//
             ),
             itemBuilder: (context, index) {
               final video = videos[index];
@@ -96,11 +96,11 @@ class VideoListBuilder extends StatelessWidget {
   }
 
   void _toggleBookmark(Video video) {
-    final updated = List<Video>.from(videoListNotifier.value);
-    final index = updated.indexWhere((v) => v.videoId == video.videoId);
+    final copy = List<Video>.from(videoListNotifier.value);
+    final index = copy.indexWhere((v) => v.videoId == video.videoId);
     if (index != -1) {
-      updated[index] = video.copyWith(bookmark: !video.bookmark);
-      videoListNotifier.value = updated;
+      copy[index] = video.copyWith(bookmark: !video.bookmark);
+      videoListNotifier.value = copy;
       if (onBookmarked != null) onBookmarked!(video);
     }
   }

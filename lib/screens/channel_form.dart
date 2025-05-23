@@ -76,7 +76,16 @@ class _ChannelFormScreenState extends State<ChannelFormScreen> {
         _saving = true;
       });
       if (_formKey.currentState!.validate()) {
-        final channelData = RequestsChannelRequest(channelName: _channelNameController.text.trim(), displayName: _displayNameController.text.trim(), skipStart: int.parse(_skipStartController.text), minDuration: int.parse(_minDurationController.text), url: _urlController.text.trim(), tags: _tagsController.text.split(',').map((e) => e.trim()).toList(), fav: _fav, isPaused: _isPaused);
+        final channelData = RequestsChannelRequest(
+            channelName: _channelNameController.text.trim(),
+            displayName: _displayNameController.text.trim(),
+            skipStart: int.parse(_skipStartController.text),
+            minDuration: int.parse(_minDurationController.text),
+            url: _urlController.text.trim(),
+            tags: _tagsController.text.trim().isNotEmpty ? _tagsController.text.split(',').map((e) => e.trim()).toList() : null,
+            fav: _fav,
+            isPaused: _isPaused,//
+        );
 
         if (isEdit) {
           // Edit

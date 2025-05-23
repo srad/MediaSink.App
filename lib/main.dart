@@ -57,16 +57,6 @@ extension HexColor on String {
 }
 
 class _MediaSinkApp extends State<MediaSinkApp> {
-  final lightTheme = ThemeData(
-    brightness: Brightness.light,
-    primaryColor: '#322448'.toColor(), //
-    appBarTheme: AppBarTheme(backgroundColor: '#322448'.toColor(), foregroundColor: Colors.white),
-  );
-  final darkTheme = ThemeData(
-    brightness: Brightness.dark,
-    primaryColor: '#322448'.toColor(), //
-    appBarTheme: AppBarTheme(backgroundColor: '#322448'.toColor(), foregroundColor: Colors.white),
-  );
 
   @override
   Widget build(BuildContext context) {
@@ -74,8 +64,8 @@ class _MediaSinkApp extends State<MediaSinkApp> {
 
     return MaterialApp(
       title: 'MediaSink',
-      theme: lightTheme,
-      darkTheme: darkTheme,
+      theme: themeProvider.lightTheme,
+      darkTheme: themeProvider.darkTheme,
       home: const StartupScreen(),
       themeMode: themeProvider.themeMode,
       initialRoute: '/',

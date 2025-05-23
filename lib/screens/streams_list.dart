@@ -42,7 +42,7 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
   bool _showFavs = false;
   final Set<int> _loadingChannelIds = {};
   final Set<int> _favChannels = {};
-  final double _iconSize = 28;
+  final double _iconSize = 22;
 
   late TabController _tabController;
   final int _numTabs = 3; // Recording, Offline, Disabled
@@ -114,32 +114,35 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
       body: ValueListenableBuilder<List<ServicesChannelInfo>>(
         valueListenable: _channelsListNotifier,
         builder: (context, channels, _) {
-          return ValueListenableBuilder(valueListenable: _isLoading, builder: (context, isLoading, child) {
-            if (isLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
+          return ValueListenableBuilder(
+            valueListenable: _isLoading,
+            builder: (context, isLoading, child) {
+              if (isLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-            if (channels.isEmpty) {
-              return const Center(child: Text("No channels"));
-            }
+              if (channels.isEmpty) {
+                return const Center(child: Text("No channels"));
+              }
 
-            Widget bodyContent;
-            if (_search.isNotEmpty) {
-              bodyContent = _buildChannelList(_searchResult, 'Search', key: const ValueKey('search_list'));
-            } else if (_showFavs) {
-              // Add key for AnimatedSwitcher if you wrap this later
-              bodyContent = _buildChannelList(_favourites, 'Favs', key: const ValueKey('favs_list'));
-            } else {
-              // Add key for AnimatedSwitcher if you wrap this later
-              bodyContent = TabBarView(
-                key: const ValueKey('tab_view'),
-                controller: _tabController, // Link controller
-                children: [_buildChannelList(_recordingChannels, 'Recording'), _buildChannelList(_offlineChannels, 'Offline'), _buildChannelList(_disabledChannels, 'Paused')],
-              );
-            }
+              Widget bodyContent;
+              if (_search.isNotEmpty) {
+                bodyContent = _buildChannelList(_searchResult, 'Search', key: const ValueKey('search_list'));
+              } else if (_showFavs) {
+                // Add key for AnimatedSwitcher if you wrap this later
+                bodyContent = _buildChannelList(_favourites, 'Favs', key: const ValueKey('favs_list'));
+              } else {
+                // Add key for AnimatedSwitcher if you wrap this later
+                bodyContent = TabBarView(
+                  key: const ValueKey('tab_view'),
+                  controller: _tabController, // Link controller
+                  children: [_buildChannelList(_recordingChannels, 'Recording'), _buildChannelList(_offlineChannels, 'Offline'), _buildChannelList(_disabledChannels, 'Paused')],
+                );
+              }
 
-            return AnimatedSwitcher(duration: const Duration(milliseconds: 300), child: bodyContent);
-          });
+              return AnimatedSwitcher(duration: const Duration(milliseconds: 300), child: bodyContent);
+            },
+          );
         },
       ),
     );
@@ -159,15 +162,15 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
       key: key,
       onRefresh: _refresh,
       child: GridView.builder(
-        padding: EdgeInsets.zero,
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
         itemCount: channels.length,
-        gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 450,
+        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+          maxCrossAxisExtent: 400,
           mainAxisSpacing: 8,
           crossAxisSpacing: 8,
-          childAspectRatio: 1.17, // 👈 tweak this until items look right
+          childAspectRatio: 3 / 2.81,//
         ),
-        key: PageStorageKey(label), // Use label to preserve scroll position
+        key: PageStorageKey(label),
         itemBuilder: (context, index) {
           final channel = channels[index];
           return _video(channel, label);
@@ -178,9 +181,9 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
 
   Widget _video(ServicesChannelInfo channel, String label) {
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
       elevation: 4,
       child: Column(
+        mainAxisSize: MainAxisSize.min, // 🔑 Ensure the column wraps content
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ClipRRect(
@@ -204,86 +207,65 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
             child: Column(
+              mainAxisSize: MainAxisSize.min, // 🔑 Ensure the column wraps content
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                GestureDetector(
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(0, 10, 0, 0),
-                    child: Row(
+                Padding(padding: EdgeInsets.symmetric(vertical: 8), child: Row(
                       children: [
                         Text(channel.displayName ?? "No display name", style: TextStyle(fontSize: 20, color: Theme.of(context).colorScheme.primary), overflow: TextOverflow.ellipsis),
                         const SizedBox(width: 4), // Small space before icon
                         const Icon(Icons.link), //
                       ],
+                )),
+                    SizedBox(
+                      height: 36, // ⬅️ Set a fixed height for horizontal scrolling
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: (channel.tags == null || channel.tags!.isEmpty) // Show placeholder if null or empty
+                              ? [ElevatedButton(onPressed: null, style: ElevatedButton.styleFrom(visualDensity: VisualDensity.compact), child: const Text('No tags'))]
+                              : channel.tags!
+                              .map(
+                                (tag) => Padding(
+                              padding: const EdgeInsets.only(right: 8.0),
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  visualDensity: VisualDensity.compact,
+                                ),
+                                onPressed: () {},
+                                child: Text(tag),
+                              ),
+                            ),
+                          )
+                              .toList(),
+                        ),
+                      ),
                     ),
-                  ),
-                  onTap: () async {
-                    // Original URL Launching logic
-                    final rawUrl = channel.url;
-                    if (rawUrl == null || rawUrl.isEmpty) {
-                      debugPrint('URL is null or empty');
-                      return;
-                    }
-                    final uri = Uri.tryParse(rawUrl);
-                    if (uri == null) {
-                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Invalid URL: $rawUrl')));
-                      return;
-                    }
-                    if (!(await canLaunchUrl(uri))) {
-                      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Cannot launch URL: $rawUrl')));
-                      return;
-                    }
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  },
-                ),
-                const Divider(color: Colors.transparent, height: 5),
+                Divider(color: Colors.grey.shade300),
                 Row(
                   children: [
-                    // Original Tags display
-                    if (channel.tags == null || channel.tags!.isEmpty) // Show placeholder if null or empty
-                      ElevatedButton(onPressed: null, style: ElevatedButton.styleFrom(visualDensity: VisualDensity.compact), child: const Text('No tags')),
-                    // Use Expanded + Wrap for tags if they might overflow
-                    Expanded(
-                      child: Wrap(
-                        spacing: 8,
-                        runSpacing: 4, // Spacing if tags wrap to next line
-                        children: channel.tags == null ? [] : channel.tags!.map((tag) => ElevatedButton(style: ElevatedButton.styleFrom(visualDensity: VisualDensity.compact), child: Text(tag), onPressed: () => {})).toList(),
-                      ),
+                    Icon(Icons.sd_storage_rounded, color: Theme.of(context).primaryColor, size: _iconSize), //
+                    const SizedBox(width: 5),
+                    Text(channel.recordingsSize?.toGB() ?? '0 GB', style: const TextStyle(fontSize: 14)),
+                    const SizedBox(width: 10),
+                    Icon(Icons.videocam_rounded, color: Theme.of(context).primaryColor, size: _iconSize),
+                    const SizedBox(width: 5),
+                    Text(channel.recordingsCount?.toString() ?? '0', style: const TextStyle(fontSize: 14)),
+                    const Spacer(),
+                    DeleteButton(onPressed: () => deleteChannel(channel), iconSize: _iconSize, iconOnly: true),
+                    IconButton(
+                      padding: EdgeInsets.symmetric(horizontal: 10),
+                      visualDensity: VisualDensity.compact,
+                      constraints: const BoxConstraints(),
+                      // Removes default min size
+                      iconSize: _iconSize,
+                      onPressed: () => editChannel(channel),
+                      //
+                      icon: const Icon(Icons.edit_rounded),
                     ),
-                    // Keep Add button separate? Or integrate differently? Original had Spacer() then button.
-                    // Spacer(), // Original position
-                    ElevatedButton.icon(style: ElevatedButton.styleFrom(visualDensity: VisualDensity.compact), icon: const Icon(Icons.add, size: 16), label: const Text('Add'), onPressed: () => {}), // Original Add button
+                    PauseButton(isPaused: channel.isPaused == true, onPressed: () => togglePause(channel), iconSize: _iconSize + 4),
+                    FavButton(onPressed: () => favChannel(channel), isFav: channel.fav == true, isBusy: _favChannels.contains(channel.channelId), iconSize: _iconSize + 4),
                   ],
-                ),
-                Divider(color: Colors.grey.shade300),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(0, 0, 0, 10),
-                  child: Row(
-                    children: [
-                      Icon(Icons.sd_storage_rounded, color: Theme.of(context).primaryColor, size: _iconSize), //
-                      const SizedBox(width: 5),
-                      Text(channel.recordingsSize?.toGB() ?? '0 GB', style: const TextStyle(fontSize: 14)),
-                      const SizedBox(width: 10),
-                      Icon(Icons.videocam_rounded, color: Theme.of(context).primaryColor, size: _iconSize),
-                      const SizedBox(width: 5),
-                      Text(channel.recordingsCount?.toString() ?? '0', style: const TextStyle(fontSize: 14)),
-                      const Spacer(),
-                      DeleteButton(onPressed: () => deleteChannel(channel), iconSize: _iconSize, iconOnly: true),
-                      IconButton(
-                        padding: EdgeInsets.symmetric(horizontal: 10),
-                        visualDensity: VisualDensity.compact,
-                        constraints: const BoxConstraints(),
-                        // Removes default min size
-                        iconSize: _iconSize,
-                        onPressed: () => editChannel(channel),
-                        //
-                        icon: const Icon(Icons.edit_rounded),
-                      ),
-                      PauseButton(isPaused: channel.isPaused == true, onPressed: () => togglePause(channel), iconSize: _iconSize + 4),
-                      const SizedBox(width: 8),
-                      FavButton(onPressed: () => favChannel(channel), isFav: channel.fav == true, isBusy: _favChannels.contains(channel.channelId), iconSize: _iconSize + 4),
-                    ],
-                  ),
                 ),
               ],
             ),
