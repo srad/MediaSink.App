@@ -30,6 +30,7 @@ class ServicesChannelInfo {
     this.skipStart,
     this.tags,
     this.url,
+    this.timeStamp,
   });
   
   factory ServicesChannelInfo.fromJson(Map<String, Object?> json) => _$ServicesChannelInfoFromJson(json);
@@ -47,6 +48,7 @@ class ServicesChannelInfo {
   final int? minDuration;
   final num? minRecording;
   final String? preview;
+  final DateTime? timeStamp;
 
   /// 1:n
   final List<DatabaseRecording>? recordings;

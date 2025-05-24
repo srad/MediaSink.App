@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:mediasink_app/rest_client_factory.dart';
+import 'package:mediasink_app/api/rest_client.dart';
+import 'package:mediasink_app/factories/rest_client_factory.dart';
 import 'package:mediasink_app/widgets/snack_utils.dart';
 import 'package:mediasink_app/widgets/video_list_builder.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/video.dart';
 
@@ -41,10 +43,11 @@ class _VideosRandomScreenState extends State<VideosRandomScreen> {
   }
 
   Future<List<Video>> _fetchVideos() async {
-    final client = await RestClientFactory.create();
-    final recordings = await client.recordings.getRecordingsRandomLimit(limit: '25');
+    final factory = context.read<RestClientFactory>();
+    final client = await factory.create();
+    final recordings = await client?.recordings.getRecordingsRandomLimit(limit: '25');
 
-    return recordings
+    return (recordings??[])
         .map(
           (recording) => Video(
             filename: recording.filename,
@@ -53,7 +56,7 @@ class _VideosRandomScreenState extends State<VideosRandomScreen> {
             bookmark: recording.bookmark == true,
             size: recording.size!,
             createdAt: DateTime.parse(recording.createdAt!),
-            previewCover: '$_serverUrl/recordings/${recording.previewCover ?? ''}',
+            previewCover: recording.previewCover,
             url: '$_serverUrl/recordings/${recording.pathRelative ?? ''}', //
           ),
         )

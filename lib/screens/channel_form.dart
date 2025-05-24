@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mediasink_app/api/export.dart';
-import 'package:mediasink_app/rest_client_factory.dart';
+import 'package:mediasink_app/factories/rest_client_factory.dart';
 import 'package:mediasink_app/utils/utils.dart';
 import 'package:mediasink_app/utils/validators.dart';
 import 'package:mediasink_app/widgets/snack_utils.dart';
+import 'package:provider/provider.dart';
 
 class ChannelForm {
   int? channelId;
@@ -87,16 +88,16 @@ class _ChannelFormScreenState extends State<ChannelFormScreen> {
             isPaused: _isPaused,//
         );
 
+        final factory = context.read<RestClientFactory>();
+        final client = await factory.create();
         if (isEdit) {
           // Edit
-          final client = await RestClientFactory.create();
-          final newChannel = await client.channels.patchChannelsId(id: widget.channel!.channelId!, channelRequest: channelData);
+          final newChannel = await client?.channels.patchChannelsId(id: widget.channel!.channelId!, channelRequest: channelData);
           if (mounted) messenger.showOk('Saved');
           if (mounted) Navigator.pop(context, newChannel); // return channel to caller
         } else {
           // Create
-          final client = await RestClientFactory.create();
-          final channelInfo = await client.channels.postChannels(channelRequest: channelData);
+          final channelInfo = await client?.channels.postChannels(channelRequest: channelData);
           if (mounted) messenger.showOk('Saved');
           if (mounted) Navigator.pop(context, channelInfo); // return channel to caller
         }

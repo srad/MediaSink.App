@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:mediasink_app/api/export.dart';
-import 'package:mediasink_app/rest_client_factory.dart';
+import 'package:mediasink_app/factories/rest_client_factory.dart';
+import 'package:mediasink_app/services/settings_service.dart';
 import 'package:mediasink_app/utils/permission_utils.dart';
 import 'package:mediasink_app/utils/utils.dart';
 import 'package:mediasink_app/widgets/app_drawer.dart';
@@ -13,7 +13,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 enum ServerState { valid, invalid, unchecked }
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.onSettingsSaved});
+  final VoidCallback? onSettingsSaved;
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -22,12 +23,11 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _formKey = GlobalKey<FormState>();
   final _serverUrlController = TextEditingController();
+  final _wsServerUrlController = TextEditingController();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
 
   String? get serverUrl => _serverUrlController.text.trim();
-
-  final _secureStorage = const FlutterSecureStorage();
 
   ServerState _serverState = ServerState.unchecked;
   bool _isSaving = false;
@@ -37,25 +37,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = false;
 
   bool _saved = false;
+  bool _settingsLoaded = false;
 
   @override
-  void initState() {
-    super.initState();
-    _loadSettings();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_settingsLoaded) {
+      _settingsLoaded = true;
+      _loadSettings();
+    }
   }
 
   Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    final serverUrl = prefs.getString('serverUrl') ?? '';
-    final username = await _secureStorage.read(key: 'server_username') ?? '';
-    final password = await _secureStorage.read(key: 'server_password') ?? '';
+    final settingsService = Provider.of<SettingsService>(context);
+
+    final serverUrl = await settingsService.getServerUrl();
+    final wsServerUlr = await settingsService.getWebSocketBaseUrl();
+    final username = await settingsService.getUsername();
+    final password = await settingsService.getPassword();
+    final isDarkMode = await settingsService.isDarkModeEnabled() ?? false;
+    final areNotificationsEnabled = await settingsService.areNotificationsEnabled() ?? false;
+
     setState(() {
-      _serverUrlController.text = serverUrl;
-      _usernameController.text = username;
-      _passwordController.text = password;
-      _darkMode = prefs.getBool('darkMode') ?? false;
-      _notificationsEnabled = prefs.getBool('notificationsEnabled') ?? false;
-      _saved = username != null && username.isNotEmpty && password != null && password.isNotEmpty;
+      _serverUrlController.text = serverUrl ?? '';
+      _wsServerUrlController.text = wsServerUlr ?? '';
+      _usernameController.text = username ?? '';
+      _passwordController.text = password ?? '';
+      _darkMode = isDarkMode;
+      _notificationsEnabled = areNotificationsEnabled;
     });
   }
 
@@ -77,26 +86,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return;
       }
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('serverUrl', _serverUrlController.text.trim());
-      await prefs.setBool('darkMode', _darkMode);
-
-
       try {
-        // Save settings and try a login request:
-        final auth = RequestsAuthenticationRequest(username: _usernameController.text.trim(), password: _passwordController.text);
-        final client = await RestClientFactory.create(auth: auth);
-        await client.auth.postAuthLogin(authenticationRequest: auth);
+        if (mounted) {
+          final settingsService = Provider.of<SettingsService>(context, listen: false);
+          await settingsService.saveServerUrl(_serverUrlController.text.trim());
+          await settingsService.saveWebSocketBaseUrl(_wsServerUrlController.text.trim());
+          await settingsService.saveDarkMode(_darkMode);
+          await settingsService.saveNotificationsEnabled(_notificationsEnabled);
 
-        await _secureStorage.write(key: 'server_username', value: _usernameController.text.trim());
-        await _secureStorage.write(key: 'server_password', value: _passwordController.text);
+          final factory = Provider.of<RestClientFactory>(context, listen: false);
+          final client = await factory.create();
 
-        setState(() { _saved = true; });
+          // Save settings and try a login request:
+          final auth = RequestsAuthenticationRequest(username: _usernameController.text.trim(), password: _passwordController.text);
+          await client.auth.postAuthLogin(authenticationRequest: auth);
+
+          await settingsService.saveUsername(_usernameController.text.trim());
+          await settingsService.savePassword(_passwordController.text);
+        }
+
+        setState(() {
+          _saved = true;
+        });
 
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings saved ✅')));
+
+        if (widget.onSettingsSaved != null) {
+          widget.onSettingsSaved!();
+        }
       } on DioException catch (dioError) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Invalid connection data, is the server IP, port and credentials correct? ❌')));
-      } catch(e) {
+      } catch (e) {
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Credentils invalid ❌')));
       } finally {
         setState(() {
@@ -105,7 +125,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     } catch (e) {
       final snackBar = SnackBar(content: Text(e.toString()));
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        final settingsService = Provider.of<SettingsService>(context, listen: false);
+        await settingsService.deleteServerUrl();
+        await settingsService.deleteWebSocketUrl();
+      }
     } finally {
       setState(() => _isSaving = false);
     }
@@ -126,7 +151,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
@@ -141,6 +166,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             children: [
               const Text('Server Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               TextFormField(controller: _serverUrlController, decoration: const InputDecoration(labelText: 'Server URL'), validator: _validateUrl),
+              TextFormField(controller: _wsServerUrlController, decoration: const InputDecoration(labelText: 'WS Server URL'), validator: _validateUrl),
               TextFormField(controller: _usernameController, decoration: const InputDecoration(labelText: 'Username'), validator: (val) => val == null || val.trim().isEmpty ? 'Required' : null),
               TextFormField(controller: _passwordController, decoration: const InputDecoration(labelText: 'Password'), obscureText: true, validator: (val) => val == null || val.isEmpty ? 'Required' : null),
               const SizedBox(height: 20),

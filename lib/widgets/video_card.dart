@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:mediasink_app/extensions/file.dart';
 import 'package:mediasink_app/extensions/time.dart';
 import 'package:mediasink_app/models/video.dart';
-import 'package:mediasink_app/rest_client_factory.dart';
+import 'package:mediasink_app/factories/rest_client_factory.dart';
 import 'package:mediasink_app/utils/http_utils.dart';
 import 'package:mediasink_app/widgets/confirm_dialog.dart';
 import 'package:mediasink_app/widgets/delete_button.dart';
 import 'package:mediasink_app/widgets/fav_button.dart';
+import 'package:mediasink_app/widgets/mediasink_image.dart';
 import 'package:mediasink_app/widgets/snack_utils.dart';
+import 'package:provider/provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class VideoCard<T> extends StatelessWidget {
@@ -46,26 +47,7 @@ class VideoCard<T> extends StatelessWidget {
         children: [
           GestureDetector(
             onTap: onTapVideo,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
-                  child: CachedNetworkImage(
-                    imageUrl: video.previewCover,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    placeholder: (context, url) => const SizedBox(child: Center(child: CircularProgressIndicator())),
-                    errorWidget:
-                        (context, url, error) => Container(
-                          color: Colors.grey[300],
-                          child: const Center(child: Icon(Icons.broken_image, size: 40)), //
-                        ),
-                  ),
-                ),
-                const Icon(Icons.play_circle_fill, size: 64, color: Colors.white70),
-              ],
-            ), //
+            child: Stack(alignment: Alignment.center, children: [ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(10)), child: MediaSinkImage(imageUrl: video.previewCover)), const Icon(Icons.play_circle_fill, size: 64, color: Colors.white70)]), //
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -115,9 +97,9 @@ class VideoCard<T> extends StatelessWidget {
                           iconSize: iconSize,
                         ),
                       DeleteButton(
-                          onPressed: () => _deleteVideo(context, video, payload),
-                          iconOnly: true,
-                          iconSize: iconSize + 2,//
+                        onPressed: () => _deleteVideo(context, video, payload),
+                        iconOnly: true,
+                        iconSize: iconSize + 2, //
                       ),
                       if (showChannelLink)
                         IconButton(
@@ -128,7 +110,7 @@ class VideoCard<T> extends StatelessWidget {
                           },
                           // You can implement the download action here
                           icon: const Icon(Icons.grid_view_rounded),
-                          iconSize: iconSize + 2,//
+                          iconSize: iconSize + 2, //
                         ),
                       const Spacer(),
                       IconButton(
@@ -153,11 +135,12 @@ class VideoCard<T> extends StatelessWidget {
 
   Future _bookmarkVideo(BuildContext context, Video recording, T payload) async {
     try {
-      final client = await RestClientFactory.create();
+      final factory = context.read<RestClientFactory>();
+      final client = await factory.create();
       if (recording.bookmark == true) {
-        await client.recordings.patchRecordingsIdUnfav(id: recording.videoId);
+        await client?.recordings.patchRecordingsIdUnfav(id: recording.videoId);
       } else {
-        await client.recordings.patchRecordingsIdFav(id: recording.videoId);
+        await client?.recordings.patchRecordingsIdFav(id: recording.videoId);
       }
       if (onBookmarked != null) onBookmarked!(payload);
     } catch (e) {
@@ -171,8 +154,9 @@ class VideoCard<T> extends StatelessWidget {
         title: const Text("Confirm"),
         content: const Text('Do you want to delete the file?'),
         onConfirm: () async {
-          final client = await RestClientFactory.create();
-          await client.recordings.deleteRecordingsId(id: recording.videoId);
+          final factory = context.read<RestClientFactory>();
+          final client = await factory.create();
+          await client?.recordings.deleteRecordingsId(id: recording.videoId);
           if (onDeleted != null) onDeleted!(payload);
         },
       );

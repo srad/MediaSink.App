@@ -1,10 +1,11 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mediasink_app/api/export.dart';
-import 'package:mediasink_app/rest_client_factory.dart';
+import 'package:mediasink_app/factories/rest_client_factory.dart';
 import 'package:mediasink_app/screens/channel_details.dart';
+import 'package:mediasink_app/widgets/mediasink_image.dart';
 import 'package:mediasink_app/widgets/snack_utils.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ChannelListScreen extends StatefulWidget {
@@ -49,10 +50,11 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
   }
 
   Future<List<ServicesChannelInfo>> fetchChannels() async {
-    final client = await RestClientFactory.create();
-    final response = await client.channels.getChannels();
-    response.sort((a, b) => a.displayName!.compareTo(b.displayName!));
-    return response;
+    final factory = context.read<RestClientFactory>();
+    final client = await factory.create();
+    final response = await client?.channels.getChannels();
+    response?.sort((a, b) => a.displayName!.compareTo(b.displayName!));
+    return response??[];
   }
 
   @override
@@ -76,10 +78,10 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
               padding: EdgeInsets.all(8),
               itemCount: channels.length,
               gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 300,
-                  mainAxisSpacing: 4,
-                  crossAxisSpacing: 4,
-                childAspectRatio: 3/2,//
+                maxCrossAxisExtent: 300,
+                mainAxisSpacing: 4,
+                crossAxisSpacing: 4,
+                childAspectRatio: 3 / 2, //
               ),
               itemBuilder: (context, index) {
                 final channel = channels[index];
@@ -90,20 +92,8 @@ class _ChannelListScreenState extends State<ChannelListScreen> {
                       // Preview image
                       Positioned.fill(
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: CachedNetworkImage(
-                            placeholder:
-                                (context, url) => const SizedBox(
-                                  child: Center(child: CircularProgressIndicator()), //
-                                ),
-                            errorWidget:
-                                (context, url, error) => Container(
-                                  color: Colors.grey[300],
-                                  child: const Center(child: Icon(Icons.broken_image, size: 40)), //
-                                ),
-                            imageUrl: '$_serverUrl/${channel!.preview}' ?? '',
-                            fit: BoxFit.cover,
-                          ), //
+                          borderRadius: BorderRadius.circular(8),
+                          child: MediaSinkImage(imageUrl: channel!.preview), //
                         ), //
                       ),
 

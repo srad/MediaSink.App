@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:mediasink_app/rest_client_factory.dart';
+import 'package:mediasink_app/api/rest_client.dart';
+import 'package:mediasink_app/factories/rest_client_factory.dart';
 import 'package:mediasink_app/widgets/snack_utils.dart';
 import 'package:mediasink_app/widgets/video_list_builder.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/video.dart';
 
@@ -41,10 +43,11 @@ class _VideosBookmarkedScreenState extends State<VideosBookmarkedScreen> {
   }
 
   Future<List<Video>> _fetchVideos() async {
-    final client = await RestClientFactory.create();
-    final recordings = await client.recordings.getRecordingsBookmarks();
+    final factory = context.read<RestClientFactory>();
+    final client = await factory.create();
+    final recordings = await client?.recordings.getRecordingsBookmarks();
 
-    return recordings
+    return (recordings??[])
         .map(
           (recording) => Video(
             videoId: recording.recordingId!,
@@ -52,7 +55,7 @@ class _VideosBookmarkedScreenState extends State<VideosBookmarkedScreen> {
             bookmark: recording.bookmark == true,
             size: recording.size!,
             createdAt: DateTime.parse(recording.createdAt!),
-            previewCover: '$_serverUrl/recordings/${recording.previewCover}',
+            previewCover: recording.previewCover,
             url: '$_serverUrl/recordings/${recording.pathRelative}',
             filename: recording.filename, //
           ),

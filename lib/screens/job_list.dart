@@ -1,15 +1,13 @@
 import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:mediasink_app/api/export.dart';
 import 'package:mediasink_app/models/job.dart';
 import 'package:mediasink_app/patterns/value_listenable_builder_2.dart';
-import 'package:mediasink_app/rest_client_factory.dart';
+import 'package:mediasink_app/factories/rest_client_factory.dart';
 import 'package:mediasink_app/screens/channel_details.dart';
 import 'package:mediasink_app/screens/video_player.dart';
-import 'package:mediasink_app/simple_http_client.dart';
+import 'package:mediasink_app/factories/simple_http_client_factory.dart';
 import 'package:mediasink_app/widgets/pause_button.dart';
 import 'package:mediasink_app/widgets/snack_utils.dart';
 import 'package:provider/provider.dart';
@@ -66,9 +64,10 @@ class _JobScreenState extends State<JobScreen> {
   }
 
   Future<bool> _fetchWorkerState() async {
-    final client = await RestClientFactory.create();
-    final worker = await client.jobs.getJobsWorker();
-    return worker.isProcessing ?? false;
+    final factory = context.read<RestClientFactory>();
+    final client = await factory.create();
+    final worker = await client?.jobs.getJobsWorker();
+    return worker?.isProcessing ?? false;
   }
 
   Future<List<Job>> _fetchJobs() async {
@@ -113,8 +112,9 @@ class _JobScreenState extends State<JobScreen> {
 
   Future<void> deleteJob(int jobId) async {
     try {
-      final client = await RestClientFactory.create();
-      await client.jobs.deleteJobsId(id: jobId);
+      final factory = context.read<RestClientFactory>();
+      final client = await factory.create();
+      await client?.jobs.deleteJobsId(id: jobId);
       _jobsNotifier.value.removeWhere((j) => j.jobId == jobId);
       if (mounted) ScaffoldMessenger.of(context).showOk('Job deleted');
     } catch (e) {

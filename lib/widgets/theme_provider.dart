@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:mediasink_app/main.dart';
+import 'package:mediasink_app/extensions/color.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ThemeProvider extends ChangeNotifier {

@@ -1,8 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:mediasink_app/rest_client_factory.dart';
-import 'package:mediasink_app/widgets/snack_utils.dart';
+import 'package:mediasink_app/factories/rest_client_factory.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
+import 'package:mediasink_app/l10n/app_localizations.dart';
+import 'package:provider/provider.dart';
 
 class AppDrawer extends StatefulWidget {
   const AppDrawer({super.key});
@@ -34,11 +35,12 @@ class _AppDrawerState extends State<AppDrawer> {
 
   Future<void> _fetchStorage() async {
     try {
-      final client = await RestClientFactory.create();
-      final response = await client.info.getInfoDisk();
+      final factory = context.read<RestClientFactory>();
+      final client = await factory.create();
+      final response = await client?.info.getInfoDisk();
 
       // Only update state if the widget is still in the widget tree
-      if (mounted) {
+      if (mounted && response != null) {
         setState(() {
           usedGB = response.usedFormattedGb?.toDouble() ?? 0;
           totalGB = response.sizeFormattedGb?.toDouble() ?? 1;
@@ -70,18 +72,19 @@ class _AppDrawerState extends State<AppDrawer> {
 
   @override
   Widget build(BuildContext context) {
-    final color = Color.alphaBlend(Colors.white.withOpacity(0.1), Theme.of(context).primaryColor);
+    final color = Color.alphaBlend(Colors.white.withValues(alpha: 0.1), Theme.of(context).primaryColor);
+    final s = S.of(context);
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          DrawerHeader(decoration: BoxDecoration(color: color), child: Row(children: [const Text('MediaSink App', style: TextStyle(fontSize: 28, color: Colors.white)), const Spacer(), SizedBox(height: 40, width: 40, child: Image.asset('assets/icon.png'))])),
+          DrawerHeader(decoration: BoxDecoration(color: color), child: Row(children: [Text(s?.appTitle ?? 'MediaSink', style: TextStyle(fontSize: 28, color: Colors.white)), const Spacer(), SizedBox(height: 40, width: 40, child: Image.asset('assets/icon.png'))])),
           _tile('Streams', '/streams', Icons.videocam_rounded),
           _tile('Channels', '/channels', Icons.grid_view_rounded),
-          _tile('Query Videos', '/filter', Icons.query_builder),
+          _tile('Query Videos', '/filter', Icons.video_collection_rounded),
           _tile('Favourites', '/bookmarked', Icons.favorite_rounded),
-          _tile('Random Videos', '/random', Icons.question_mark),
-          _tile('Jobs', '/jobs', Icons.add_chart_rounded),
+          _tile('Random Videos', '/random', Icons.grid_view_rounded),
+          _tile('Jobs', '/jobs', Icons.work),
           _tile('Settings', '/settings', Icons.settings),
           _tile('About', '/about', Icons.info),
           Divider(height: 10),

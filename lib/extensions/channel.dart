@@ -19,9 +19,11 @@ extension ServicesChannelInfoCopyWith on ServicesChannelInfo {
     int? minRecording,
     int? recordingsSize,
     int? recordingsCount,
-    String? preview, //
+    String? preview,
+    DateTime? timeStamp, //
   }) {
     return ServicesChannelInfo(
+      timeStamp: timeStamp ?? DateTime.now(),
       recordings: recordings ?? this.recordings,
       channelId: channelId ?? this.channelId,
       createdAt: createdAt ?? this.createdAt,

@@ -1,25 +1,47 @@
 import 'package:dio/dio.dart';
 import 'package:mediasink_app/api/export.dart';
 import 'package:mediasink_app/api/rest_client.dart';
-import 'package:mediasink_app/token_manager.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:mediasink_app/services/settings_service.dart';
+import 'package:mediasink_app/services/token_manager.dart';
 
 class RestClientFactory {
-  static final Dio _dio = Dio();
+  final Dio _dio;
+  final SettingsService _settingsService;
+  final TokenManager _tokenManager;
+  bool _interceptorsAdded = false;
+
+  RestClientFactory({
+    required Dio dio,
+    required SettingsService settingsService,
+    required TokenManager tokenManager,
+  })  : _dio = dio,
+        _settingsService = settingsService,
+        _tokenManager = tokenManager;
 
   // Optionally pass credentials as arguments, otherwise taken from secure storage.
-  static Future<RestClient> create({RequestsAuthenticationRequest? auth}) async {
-    final prefs = await SharedPreferences.getInstance();
-    final serverUrl = prefs.getString('serverUrl');
-    final baseUrl = '$serverUrl/api/v1';
+  Future<RestClient> create() async {
+    final serverUrl = await _settingsService.getServerUrl();
+    final effectiveBaseUrl = serverUrl != null ? '$serverUrl/api/v1' : null;
+
+    if (effectiveBaseUrl != null) {
+      _dio.options.baseUrl = effectiveBaseUrl;
+    } else {
+      // Decide behavior if URL is null (throw error, or RestClient handles it)
+      // For now, let's assume RestClient needs a valid URL from Dio's options
+      if (_dio.options.baseUrl.isEmpty) {
+        throw Exception("Server URL is not configured and Dio has no default base URL.");
+      }
+    }
+
+    final auth = await _settingsService.getAuthCredentials();
 
     // Add interceptors only once. On startup Dio already has one.
-    if (_dio.interceptors.length == 1) {
+    if (!_interceptorsAdded) {
       _dio.interceptors.add(
         InterceptorsWrapper(
           onRequest: (options, handler) async {
             try {
-              final token = await TokenManager().getToken(auth: auth);
+              final token = await TokenManager().getToken(auth: RequestsAuthenticationRequest(username: auth?.$1, password: auth?.$2));
               if (token != null) {
                 options.headers['Authorization'] = 'Bearer $token';
               }
@@ -40,7 +62,7 @@ class RestClientFactory {
               try {
                 TokenManager().clearToken();
                 // Try get new token again
-                final token = await TokenManager().getToken(auth: auth);
+                final token = await TokenManager().getToken(auth: RequestsAuthenticationRequest(username: auth?.$1, password: auth?.$2));
 
                 if (token != null) {
                   error.requestOptions.headers['Authorization'] = 'Bearer $token';
@@ -71,8 +93,9 @@ class RestClientFactory {
           },
         ),
       );
+      _interceptorsAdded = true;
     }
 
-    return RestClient(_dio, baseUrl: baseUrl);
+    return RestClient(_dio, baseUrl: _dio.options.baseUrl);
   }
 }

@@ -17,11 +17,10 @@
         <true/>
         <key>UISupportsDocumentBrowser</key>
         <true/>
-
 		<key>CFBundleDevelopmentRegion</key>
 		<string>$(DEVELOPMENT_LANGUAGE)</string>
 		<key>CFBundleDisplayName</key>
-		<string>Mediasink App</string>
+		<string>MediaSink</string>
 		<key>CFBundleExecutable</key>
 		<string>$(EXECUTABLE_NAME)</string>
 		<key>CFBundleIdentifier</key>

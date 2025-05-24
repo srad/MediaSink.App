@@ -19,15 +19,15 @@ extension DialogExtensions on BuildContext {
           actions: <Widget>[
             TextButton(
               onPressed: () {
-                Navigator.pop(contextSafe, 'Cancel');
                 onCancel?.call();
+                Navigator.pop(contextSafe, 'Cancel');
               },
               child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () {
-                Navigator.pop(contextSafe, 'OK');
                 onConfirm?.call();
+                Navigator.pop(contextSafe, 'OK');
               },
               child: const Text('OK'),
             ),

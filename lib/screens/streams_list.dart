@@ -1,74 +1,26 @@
+import 'dart:async';
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:mediasink_app/api/export.dart';
 import 'package:mediasink_app/extensions/channel.dart';
 import 'package:mediasink_app/extensions/file.dart';
-import 'package:mediasink_app/rest_client_factory.dart';
+import 'package:mediasink_app/factories/rest_client_factory.dart';
 import 'package:mediasink_app/screens/channel_details.dart';
 import 'package:mediasink_app/screens/channel_form.dart';
+import 'package:mediasink_app/services/websocket_service.dart';
+import 'package:mediasink_app/websocket_event.dart';
 import 'package:mediasink_app/widgets/app_drawer.dart';
 import 'package:mediasink_app/widgets/channel_search_app_bar.dart';
 import 'package:mediasink_app/widgets/confirm_dialog.dart';
 import 'package:mediasink_app/widgets/delete_button.dart';
 import 'package:mediasink_app/widgets/fav_button.dart';
+import 'package:mediasink_app/widgets/mediasink_image.dart';
 import 'package:mediasink_app/widgets/pause_button.dart';
 import 'package:mediasink_app/widgets/snack_utils.dart';
 import 'package:mediasink_app/widgets/recording_indicator.dart';
-
-double calculateChildAspectRatio({
-  required BuildContext context,
-  required double maxCrossAxisExtent,
-  required double crossAxisSpacing,
-  required double desiredItemHeight,
-}) {
-  final double screenWidth = MediaQuery.of(context).size.width;
-
-  if (screenWidth <= 0 || desiredItemHeight <= 0 || maxCrossAxisExtent <= 0) {
-    return 1.0; // Default or error case
-  }
-
-  // Estimate the number of columns the delegate would choose
-  // The delegate tries to fit as many columns as possible where each item's
-  // width is at most maxCrossAxisExtent.
-  int numColumns = 1;
-  double calculatedItemWidth = screenWidth; // Start with 1 column
-
-  // Iterate to find the optimal number of columns and the resulting item width
-  // Start with a reasonable max guess for columns, e.g. screenWidth / (a small width like 100)
-  // Or iterate downwards from a max practical number of columns (e.g., 10)
-  for (int n = (screenWidth / (maxCrossAxisExtent * 0.5)).ceil() + 2; n >= 1; n--) { // Iterate downwards
-    // Calculate width if 'n' columns were used
-    final double potentialItemWidth = (screenWidth - (n - 1) * crossAxisSpacing) / n;
-    if (potentialItemWidth <= 0) continue; // Not possible
-
-    // If this width is less than or equal to maxCrossAxisExtent,
-    // this is a candidate configuration. The delegate picks the one
-    // that maximizes 'n' while satisfying this.
-    if (potentialItemWidth <= maxCrossAxisExtent) {
-      numColumns = n;
-      calculatedItemWidth = potentialItemWidth;
-      break; // Found the number of columns the delegate would likely choose
-    }
-  }
-
-  // If after the loop, we are still at the initial state (e.g., screen too narrow for any reasonable mCE)
-  // or if calculatedItemWidth is still very large, it means we'll likely have 1 column.
-  if (numColumns == 1 && calculatedItemWidth > maxCrossAxisExtent) {
-    // If one column would be wider than mCE, the delegate would cap it at mCE
-    // (This scenario is a bit tricky as the delegate also tries to fill space)
-    // For simplicity, let's assume if 1 column, it takes screenWidth unless mCE is smaller
-    calculatedItemWidth = (screenWidth < maxCrossAxisExtent) ? screenWidth : maxCrossAxisExtent;
-  }
-
-
-  // Now calculate the aspect ratio
-  final double childAspectRatio = calculatedItemWidth / desiredItemHeight;
-
-  // print('ScreenW: $screenWidth, mCE: $maxCrossAxisExtent, cS: $crossAxisSpacing, dH: $desiredItemHeight');
-  // print('NumCols: $numColumns, ItemW: $calculatedItemWidth, cAR: $childAspectRatio');
-
-  return childAspectRatio > 0 ? childAspectRatio : 1.0; // Ensure positive
-}
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class StreamsListScreen extends StatefulWidget {
   const StreamsListScreen({super.key});
@@ -80,6 +32,8 @@ class StreamsListScreen extends StatefulWidget {
 class _StreamsListScreenState extends State<StreamsListScreen> with TickerProviderStateMixin {
   final ValueNotifier<List<ServicesChannelInfo>> _channelsListNotifier = ValueNotifier([]);
   final ValueNotifier<bool> _isLoading = ValueNotifier(false);
+
+  late final StreamSubscription _webSocketSub;
 
   String _search = "";
 
@@ -106,6 +60,16 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
     super.initState();
     _loadChannels();
     _tabController = TabController(length: _numTabs, vsync: this);
+
+    final webSocketService = Provider.of<WebSocketService>(context, listen: false);
+    _webSocketSub = webSocketService.messages.listen(
+      (message) {
+        _handleWebSocketMessage(message);
+      },
+      onError: (error) {
+        debugPrint('WebSocket error: $error');
+      },
+    );
   }
 
   Future _loadChannels() async {
@@ -128,14 +92,18 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
   @override
   void dispose() {
     _tabController.dispose();
+    _webSocketSub.cancel();
     super.dispose();
   }
 
   Future<List<ServicesChannelInfo>> fetchChannels() async {
-    final client = await RestClientFactory.create();
-    final response = await client.channels.getChannels();
-    response.sort((a, b) => a.displayName!.compareTo(b.displayName!));
-    return response;
+    final factory = context.read<RestClientFactory>();
+    final client = await factory.create();
+    final response = await client?.channels.getChannels();
+    if (response == null) return [];
+    final stamped = response.map((channel) => channel.copyWith(timeStamp: DateTime.now())).toList();
+    stamped?.sort((a, b) => a.displayName!.compareTo(b.displayName!));
+    return stamped;
   }
 
   @override
@@ -246,8 +214,13 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  margin: EdgeInsetsDirectional.symmetric(vertical: 6),
+                GestureDetector(
+                  onTap: () async {
+                    final url = Uri.tryParse(channel.url ?? '');
+                    if (url != null && await canLaunchUrl(url)) {
+                      await launchUrl(url);
+                    }
+                  },
                   child: Row(
                     children: [
                       Text(channel.displayName ?? "No display name", style: TextStyle(fontSize: 20, color: Theme.of(context).colorScheme.primary), overflow: TextOverflow.ellipsis),
@@ -267,7 +240,7 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
   }
 
   Widget _buildPreviewOverlay(final ServicesChannelInfo channel, final int tabIndex) {
-    final imageWidget = _image(channel.preview);
+    final imageWidget = _image(channel.preview, channel.timeStamp);
     final filteredImage = tabIndex == 2 ? ColorFiltered(colorFilter: const ColorFilter.mode(Colors.grey, BlendMode.saturation), child: imageWidget) : imageWidget;
 
     return Stack(
@@ -281,19 +254,13 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
             right: 15,
             child: RecordingIndicator(), //
           ),
+        const Positioned(bottom: 15, right: 15, child: Icon(Icons.touch_app_outlined, size: 30)),
       ],
     );
   }
 
-  Widget _image(final String? preview) {
-    return CachedNetworkImage(
-      height: 180,
-      width: double.infinity,
-      fit: BoxFit.cover,
-      imageUrl: preview != null && preview!.isNotEmpty ? 'http://192.168.0.219:3000/recordings/${preview!}' : '',
-      placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
-      errorWidget: (context, url, error) => Container(height: 180, color: Colors.grey[300], child: const Center(child: Icon(Icons.broken_image, size: 40))), //
-    );
+  Widget _image(final String? preview, DateTime? timeStamp) {
+    return MediaSinkImage(imageUrl: preview, timeStamp: timeStamp);
   }
 
   Future<void> togglePause(final ServicesChannelInfo channel) async {
@@ -329,16 +296,17 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
     final int id = channel.channelId!;
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final api = await RestClientFactory.create();
+      final factory = context.read<RestClientFactory>();
+      final client = await factory.create();
 
       setState(() {
         _loadingChannelIds.add(id);
       });
 
       if (channel.isPaused!) {
-        await api.channels.postChannelsIdResume(id: id);
+        await client?.channels.postChannelsIdResume(id: id);
       } else {
-        await api.channels.postChannelsIdPause(id: id);
+        await client?.channels.postChannelsIdPause(id: id);
       }
 
       final index = _channelsListNotifier.value.indexWhere((c) => c.channelId == id);
@@ -365,12 +333,13 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
       setState(() => _favChannels.add(channel.channelId!));
       final int id = channel.channelId!;
       final bool currentFavStatus = channel.fav!;
-      final client = await RestClientFactory.create();
+      final factory = context.read<RestClientFactory>();
+      final client = await factory.create();
 
       if (currentFavStatus == true) {
-        await client.channels.patchChannelsIdUnfav(id: id);
+        await client?.channels.patchChannelsIdUnfav(id: id);
       } else {
-        await client.channels.patchChannelsIdFav(id: id);
+        await client?.channels.patchChannelsIdFav(id: id);
       }
       final index = _channelsListNotifier.value.indexWhere((c) => c.channelId == id);
       if (index != -1) {
@@ -393,8 +362,9 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
         title: const Text('Confirm'),
         content: Text('Do you want to delete the channel: ${channel.displayName}?'),
         onConfirm: () async {
-          final client = await RestClientFactory.create();
-          await client.channels.deleteChannelsId(id: channel.channelId!);
+          final factory = context.read<RestClientFactory>();
+          final client = await factory.create();
+          await client?.channels.deleteChannelsId(id: channel.channelId!);
           setState(() {
             _channelsListNotifier.value.removeWhere((c) => c.channelId == channel.channelId!);
           });
@@ -537,5 +507,50 @@ class _StreamsListScreenState extends State<StreamsListScreen> with TickerProvid
         ),
       ),
     );
+  }
+
+  void _handleWebSocketMessage(Map<String, dynamic> data) {
+    final name = data['name'];
+    switch (name) {
+      case WebSocketEvent.channelThumbnail:
+        final int channelId = data['data'];
+        updateChannelPreview(channelId);
+      case WebSocketEvent.channelStart:
+        final int channelId = data['data'];
+        final currentList = _channelsListNotifier.value;
+        final index = currentList.indexWhere((c) => c.channelId == channelId);
+        if (index != -1) {
+          final updatedChannel = currentList[index].copyWith(isRecording: true, isOnline: true, isPaused: false);
+          final updatedList = List<ServicesChannelInfo>.from(currentList);
+          updatedList[index] = updatedChannel;
+          _channelsListNotifier.value = updatedList;
+        }
+      case WebSocketEvent.channelOffline:
+        final int channelId = data['data'];
+        final currentList = _channelsListNotifier.value;
+        final index = currentList.indexWhere((c) => c.channelId == channelId);
+        if (index != -1) {
+          final updatedChannel = currentList[index].copyWith(isRecording: false, isOnline: false);
+          final updatedList = List<ServicesChannelInfo>.from(currentList);
+          updatedList[index] = updatedChannel;
+          _channelsListNotifier.value = updatedList;
+        }
+      case _:
+        if (name != WebSocketEvent.heartbeat) {
+          log('Unhandled WebSocket message: $data');
+        }
+    }
+  }
+
+  // Bumps the timestamp for cache refresh.
+  void updateChannelPreview(int channelId) {
+    final currentList = _channelsListNotifier.value;
+    final index = currentList.indexWhere((c) => c.channelId == channelId);
+    if (index != -1) {
+      final updatedChannel = currentList[index].copyWith(timeStamp: DateTime.now());
+      final updatedList = List<ServicesChannelInfo>.from(currentList);
+      updatedList[index] = updatedChannel;
+      _channelsListNotifier.value = updatedList;
+    }
   }
 }

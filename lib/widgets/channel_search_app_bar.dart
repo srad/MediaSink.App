@@ -1,5 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:mediasink_app/api/rest_client.dart';
+import 'package:mediasink_app/factories/rest_client_factory.dart';
+import 'package:mediasink_app/widgets/confirm_dialog.dart';
+import 'package:mediasink_app/widgets/polling_widget.dart';
+import 'package:provider/provider.dart';
 
 class ChannelSearchAppBar extends StatefulWidget implements PreferredSizeWidget {
   final Function(String)? onSearchChanged;
@@ -50,11 +55,63 @@ class _ChannelSearchAppBarState extends State<ChannelSearchAppBar> {
   @override
   Widget build(BuildContext context) {
     final color = Color.alphaBlend(Colors.white.withValues(alpha: 0.9), Theme.of(context).primaryColor);
+    final factory = context.read<RestClientFactory>();
 
     return AppBar(
       automaticallyImplyLeading: false,
-      title: TextField(autofocus: false, controller: _searchController, decoration: InputDecoration(hintText: 'Search channels...', border: InputBorder.none, hintStyle: TextStyle(color: color)), style: TextStyle(color: color), cursorColor: color),
+      title: TextField(
+        autofocus: false,
+        controller: _searchController,
+        decoration: InputDecoration(hintText: 'Search channels...', border: InputBorder.none, hintStyle: TextStyle(color: color)),
+        style: TextStyle(color: color),
+        cursorColor: color, //
+      ),
       actions: [
+        FutureBuilder(
+          future: factory.create(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData || snapshot.data == null) {
+              return CircularProgressIndicator();
+            }
+            final client = snapshot.data!;
+
+            return PollingBuilder(
+              pollingFunction: client!.recorder.getRecorder,
+              pollingInterval: const Duration(seconds: 3),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting && snapshot.data == null) {
+                  // Show a loading indicator only if there's no previous data to display
+                  return const CircularProgressIndicator();
+                }
+                if (snapshot.hasError) {
+                  return Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.red), textAlign: TextAlign.center);
+                }
+                if (snapshot.hasData) {
+                  final isRecording = snapshot.data?.isRecording ?? false;
+
+                  return IconButton(
+                    onPressed: () async {
+                      await context.confirm(
+                        title: Text('Confirm'),
+                        content: Text('${isRecording ? 'Pause' : 'Resume'} recording?'),
+                        onConfirm: () async {
+                          if (isRecording) {
+                            await client?.recorder.postRecorderPause();
+                          } else {
+                            await client?.recorder.postRecorderResume();
+                          }
+                        },
+                      );
+                    },
+                    icon: Icon(snapshot.data?.isRecording ?? false ? Icons.pause_circle_rounded : Icons.play_circle_rounded, color: snapshot.data?.isRecording ?? false ? Colors.orangeAccent : Colors.lightGreen, size: 30),
+                  );
+                } else {
+                  return const CircularProgressIndicator();
+                }
+              },
+            );
+          },
+        ),
         if (_showClearIcon)
           IconButton(
             icon: Icon(Icons.clear, color: color),

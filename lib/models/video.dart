@@ -5,7 +5,7 @@ class Video {
   final int size; // assuming size is in GB or any other unit you'd like
   final DateTime createdAt;
   bool bookmark;
-  final String previewCover;
+  final String? previewCover;
   final String url;
   final String filename;
 

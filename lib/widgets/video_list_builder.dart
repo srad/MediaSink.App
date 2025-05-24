@@ -42,9 +42,9 @@ class VideoListBuilder extends StatelessWidget {
         return RefreshIndicator(
           onRefresh: () async => onRefresh(),
           child: ListView.separated(
-            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
             itemCount: videos.length,
-            separatorBuilder: (context, index) => Divider(color: Colors.transparent, height: 0),
+            separatorBuilder: (context, index) => Divider(color: Colors.transparent, height: 10),
+            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
             itemBuilder: (context, index) {
               final video = videos[index];
               return VideoCard(

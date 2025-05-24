@@ -1,31 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_downloader/flutter_downloader.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-import 'package:mediasink_app/screens/channel_details.dart';
-import 'package:mediasink_app/screens/channel_form.dart';
-import 'package:mediasink_app/screens/channel_list.dart';
-import 'package:mediasink_app/screens/job_list.dart';
-import 'package:mediasink_app/screens/streams_list.dart';
-import 'package:mediasink_app/screens/startup.dart';
-import 'package:mediasink_app/screens/About.dart';
-import 'package:mediasink_app/screens/settings.dart';
-import 'package:mediasink_app/screens/videos_bookmarked.dart';
-import 'package:mediasink_app/screens/videos_filter.dart';
-import 'package:mediasink_app/screens/videos_random.dart';
+import 'package:mediasink_app/bootstrap.dart';
+import 'package:mediasink_app/mediasink.dart';
 import 'package:mediasink_app/widgets/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:fvp/fvp.dart' as fvp;
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.landscapeLeft,
-    DeviceOrientation.landscapeRight,
+    DeviceOrientation.landscapeRight, //
   ]);
+
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+
   fvp.registerWith(
     options: {
       'platforms': ['android', 'ios'],
@@ -33,64 +26,27 @@ void main() async {
   ); // only these platforms will use this plugin implementation
 
   await FlutterDownloader.initialize(
-      debug: false, // optional: set to false to disable printing logs to console (default: true)
-      ignoreSsl: true // option: set to false to disable working with http links (default: false)
+    debug: false, // optional: set to false to disable printing logs to console (default: true)
+    ignoreSsl: true, // option: set to false to disable working with http links (default: false)
   );
 
   //debugPaintSizeEnabled = false;
-  runApp(ChangeNotifierProvider(create: (_) => ThemeProvider(), child: MediaSinkApp()));
+  final bootstrap = await minimalBootstrap();
+  final isConfigured = await bootstrap.settingsService.areCoreServicesConfigured();
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()), //
+      ],
+      child: MediaSinkApp(
+        settingsService: bootstrap.settingsService,
+        isConfigured: isConfigured,
+        dio: bootstrap.dio,
+        restClientFactory: bootstrap.restClientFactory,
+        tokenManager: bootstrap.tokenManager, //
+      ),
+    ),
+  );
   // FlutterNativeSplash.remove();
-}
-
-class MediaSinkApp extends StatefulWidget {
-  const MediaSinkApp({super.key});
-
-  @override
-  State<StatefulWidget> createState() => _MediaSinkApp();
-}
-
-extension HexColor on String {
-  Color toColor() {
-    final hex = replaceAll('#', '');
-    return Color(int.parse('FF$hex', radix: 16));
-  }
-}
-
-class _MediaSinkApp extends State<MediaSinkApp> {
-
-  @override
-  Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
-
-    return MaterialApp(
-      title: 'MediaSink',
-      theme: themeProvider.lightTheme,
-      darkTheme: themeProvider.darkTheme,
-      home: const StartupScreen(),
-      themeMode: themeProvider.themeMode,
-      initialRoute: '/',
-      routes: {
-        '/streams': (context) => StreamsListScreen(),
-        '/channels': (context) => ChannelListScreen(),
-        '/channel': (context) => ChannelDetailsScreen(channelId: ModalRoute.of(context)!.settings.arguments as int, title: ModalRoute.of(context)!.settings.arguments as String),
-        '/channelForm': (context) => const ChannelFormScreen(),
-        '/filter': (context) => const VideosFilterScreen(),
-        '/bookmarked': (context) => const VideosBookmarkedScreen(),
-        '/random': (context) => const VideosRandomScreen(),
-        '/jobs': (context) => const JobScreen(),
-        // '/channel': (context) {
-        //   final videoId = ModalRoute.of(context)!.settings.arguments as int;
-        //   return ChannelScreen(videoId: videoId);
-        // },
-        // '/add': (context) => AddChannelScreen(),
-        // '/video': (context) {
-        //   final videoId = ModalRoute.of(context)!.settings.arguments as int;
-        //   return VideoScreen(videoId: videoId);
-        // },
-        // '/filter': (context) => FilterScreen(),
-        '/settings': (context) => SettingsScreen(),
-        '/about': (context) => AboutScreen(),
-      },
-    );
-  }
 }

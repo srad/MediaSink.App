@@ -1,11 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:mediasink_app/api/export.dart';
 import 'package:mediasink_app/extensions/channel.dart';
 import 'package:mediasink_app/extensions/file.dart';
 import 'package:mediasink_app/extensions/recording.dart';
 import 'package:mediasink_app/models/video.dart';
-import 'package:mediasink_app/rest_client_factory.dart';
+import 'package:mediasink_app/factories/rest_client_factory.dart';
 import 'package:mediasink_app/screens/video_player.dart';
 import 'package:mediasink_app/widgets/confirm_dialog.dart';
 import 'package:mediasink_app/widgets/delete_button.dart';
@@ -13,8 +12,8 @@ import 'package:mediasink_app/widgets/fav_button.dart';
 import 'package:mediasink_app/widgets/snack_utils.dart';
 import 'package:mediasink_app/widgets/pause_button.dart';
 import 'package:mediasink_app/widgets/video_card.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:timeago/timeago.dart' as timeago;
 
 class ChannelDetailsScreen extends StatefulWidget {
   final int channelId;
@@ -44,9 +43,10 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
   }
 
   Future<void> _fetchChannelDetails(int channelId) async {
-    final api = await RestClientFactory.create();
-    final channel = await api.channels.getChannelsId(id: channelId);
-    channel.recordings?.sort((a, b) => DateTime.parse(b.createdAt!).compareTo(DateTime.parse(a.createdAt!)));
+    final factory = context.read<RestClientFactory>();
+    final client = await factory.create();
+    final channel = await client?.channels.getChannelsId(id: channelId);
+    channel?.recordings?.sort((a, b) => DateTime.parse(b.createdAt!).compareTo(DateTime.parse(a.createdAt!)));
     setState(() {
       _channel = channel;
     });
@@ -95,12 +95,13 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
       final channel = _channel!;
       final int id = channel.channelId!;
       final bool currentFavStatus = channel.fav!;
-      final client = await RestClientFactory.create();
+      final factory = context.read<RestClientFactory>();
+      final client = await factory.create();
 
       if (currentFavStatus == true) {
-        await client.channels.patchChannelsIdUnfav(id: id);
+        await client?.channels.patchChannelsIdUnfav(id: id);
       } else {
-        await client.channels.patchChannelsIdFav(id: id);
+        await client?.channels.patchChannelsIdFav(id: id);
       }
       setState(() {
         _channel = _channel!.copyWith(fav: !currentFavStatus);
@@ -127,8 +128,9 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
           ),
         )
         : ListView.separated(
-          separatorBuilder: (context, index) => Divider(color: Colors.transparent, height: 0),
-          itemCount: (_channel!.recordings??[]).length,
+          separatorBuilder: (context, index) => Divider(color: Colors.transparent, height: 10),
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+          itemCount: (_channel!.recordings ?? []).length,
           itemBuilder: (context, index) {
             if (_channel == null || _channel?.recordings == null) return SizedBox.shrink();
             final channel = _channel!;
@@ -147,7 +149,7 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
                 size: recording.size!,
                 bookmark: recording.bookmark!,
                 createdAt: DateTime.tryParse(recording.createdAt!) ?? DateTime.now(),
-                previewCover: '$_serverUrl/recordings/${recording.previewCover ?? channel.preview}', //
+                previewCover: recording.previewCover ?? channel.preview, //
               ),
               onBookmarked: _videoBookmarked,
               onDeleted: _videoDeleted,
@@ -178,16 +180,17 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
     try {
       final channel = _channel!;
       final int id = channel.channelId!;
-      final api = await RestClientFactory.create();
+      final factory = context.read<RestClientFactory>();
+      final client = await factory.create();
 
       setState(() {
         _isPausing = true;
       });
 
       if (channel.isPaused!) {
-        await api.channels.postChannelsIdResume(id: id);
+        await client?.channels.postChannelsIdResume(id: id);
       } else {
-        await api.channels.postChannelsIdPause(id: id);
+        await client?.channels.postChannelsIdPause(id: id);
       }
 
       setState(() {
@@ -212,8 +215,9 @@ class _ChannelDetailsScreenState extends State<ChannelDetailsScreen> {
         title: const Text('Confirm'),
         content: Text('Do you want to delete the channel: ${_channel!.displayName}?'),
         onConfirm: () async {
-          final client = await RestClientFactory.create();
-          await client.channels.deleteChannelsId(id: _channel!.channelId!);
+          final factory = context.read<RestClientFactory>();
+          final client = await factory.create();
+          await client?.channels.deleteChannelsId(id: _channel!.channelId!);
 
           messenger.showOk('Channel "${_channel?.displayName}" deleted');
 

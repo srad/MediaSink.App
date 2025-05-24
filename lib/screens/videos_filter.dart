@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mediasink_app/api/export.dart';
-import 'package:mediasink_app/simple_http_client.dart';
+import 'package:mediasink_app/factories/simple_http_client_factory.dart';
 import 'package:mediasink_app/widgets/snack_utils.dart';
 import 'package:mediasink_app/widgets/video_list_builder.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -63,7 +63,7 @@ class _VideosFilterScreenState extends State<VideosFilterScreen> {
               duration: recording.duration!,
               size: recording.size!,
               createdAt: DateTime.parse(recording.createdAt!),
-              previewCover: '$_serverUrl/recordings/${recording.previewCover}', //
+              previewCover: recording.previewCover, //
             ),
           )
           .toList();

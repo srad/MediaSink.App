@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:mediasink_app/token_manager.dart';
+import 'package:mediasink_app/services/token_manager.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SimpleHttpClientFactory {
